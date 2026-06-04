@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Bounded Observer: a sandbox and a walkthrough</title>
+<style>
+  :root{
+    --ink:#211f1c; --muted:#6b665d; --paper:#faf9f6; --card:#ffffff;
+    --border:#e7e1d5; --accent:#9c5b34; --teal:#2a9d8f; --gold:#cf9a1e; --brown:#9c5b34;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;}
+  .wrap{max-width:860px;margin:0 auto;padding:34px 22px 70px;}
+  h1{font-weight:600;font-size:28px;letter-spacing:.2px;margin:0 0 6px;}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 8px;}
+  .article p{font-size:16.5px;line-height:1.68;margin:0 0 14px;color:#2b2823;}
+  .article h2{font-size:21px;font-weight:600;margin:34px 0 10px;}
+  .article h3{font-size:16px;font-weight:600;margin:18px 0 6px;}
+  .rulebar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0 14px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;}
+  .rulebar label{font-size:13px;color:var(--muted);}
+  button.rb{font-family:var(--sans);font-size:14px;padding:7px 13px;border:1px solid var(--border);
+    background:var(--card);border-radius:9px;cursor:pointer;color:var(--ink);}
+  button.rb.active{border-color:var(--accent);background:#f6ece6;color:var(--accent);font-weight:600;}
+  input[type=number]{width:74px;font-size:14px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card);}
+  input[type=range]{accent-color:var(--accent);}
+  .fig{max-width:460px;margin:8px auto 2px;}
+  .stcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;}
+  .stcard h3{margin:0 0 8px;font-size:14px;font-weight:600;}
+  canvas.st{width:100%;height:auto;image-rendering:pixelated;border-radius:6px;border:1px solid var(--border);background:#fff;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 16px 12px;margin:10px 0 8px;}
+  .card h3{font-size:15px;font-weight:600;margin:0 0 2px;color:var(--accent);}
+  .why{color:var(--muted);font-size:13px;margin:0 0 12px;}
+  .ctl{display:flex;align-items:center;gap:10px;margin:2px 0 8px;}
+  .ctl label{font-size:13px;color:var(--muted);min-width:118px;}
+  .ctl .val{font-family:var(--mono);font-size:13px;color:var(--accent);min-width:120px;text-align:right;}
+  canvas.chart{width:100%;height:210px;display:block;}
+  .readout{font-size:13px;color:var(--ink);margin-top:6px;min-height:20px;}
+  .readout b{color:var(--accent);font-weight:600;}
+  .legend{font-size:12px;color:var(--muted);margin-top:4px;}
+  .legend span{display:inline-block;margin-right:12px;}
+  .dot{display:inline-block;width:9px;height:3px;vertical-align:middle;margin-right:4px;border-radius:1px;}
+  .glossary{font-size:15px;line-height:1.6;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;}
+  .glossary b{font-weight:600;}
+  footer{margin-top:30px;color:var(--muted);font-size:12.5px;line-height:1.6;border-top:1px solid var(--border);padding-top:14px;}
+  code{font-family:var(--mono);background:#f1ece2;padding:1px 5px;border-radius:5px;font-size:13.5px;}
+</style>
+</head>
+<body>
+<div class="wrap article">
+  <h1>The bounded observer</h1>
+  <p class="sub">A sandbox you can play with, and a plain walkthrough of what it shows.</p>
+
+  <h2>The one idea</h2>
+  <p>No mind sees all of reality. Your eyes take in a sliver of the light in a room, your brain throws most of it away, and what is left is a compressed, useful sketch you act on. Any observer that is part of the world, whether a cell, a brain, a computer, or an AI, faces the same problem: there is far more going on than it can track, so it must compress.</p>
+  <p>This page lets you measure that. It builds a tiny, fully known toy world, drops a deliberately limited observer inside it, and asks three questions: how much can the observer predict, does changing its viewpoint change what is knowable, and if you run it forward where does the arrow of time come from? The surprise is that the answers are not about the world alone. They are about the fit between the world and the observer looking at it.</p>
+
+  <h2>The toy world: cellular automata</h2>
+  <p>We need a world simple enough to understand completely yet rich enough to be interesting. A cellular automaton is perfect. Picture a long row of cells, each black (1) or white (0). Time moves in steps; at each step every cell updates from itself and its two neighbors by a fixed rule. There are 256 such rules, numbered 0 to 255 (the numbering is Stephen Wolfram's). Four of them cover the range: Rule 250 is pure order, Rule 90 draws the Sierpiński fractal, Rule 110 is complex enough to run any computation, and Rule 30 looks like static and was used as a random-number generator.</p>
+  <p>The whole point: the observer never sees the entire grid. It peeks through a keyhole. In the first two experiments it watches a single column of cells over time; in the third it sees only a blurry, blocky version. The rule you pick below drives all three experiments.</p>
+
+  <div class="rulebar">
+    <label>World (elementary CA rule):</label>
+    <button class="rb" data-rule="250">250 order</button>
+    <button class="rb" data-rule="90">90 fractal</button>
+    <button class="rb" data-rule="110">110 complex</button>
+    <button class="rb" data-rule="30">30 chaos</button>
+    <span style="color:var(--muted);font-size:13px;">or</span>
+    <input type="number" id="ruleNum" min="0" max="255" step="1" value="110" />
+    <span id="status" style="font-size:12.5px;color:var(--muted);"></span>
+  </div>
+  <div class="fig stcard">
+    <h3>The rule, running from a single black cell</h3>
+    <canvas id="stCanvas" class="st" width="361" height="180"></canvas>
+  </div>
+
+  <h2>The measuring stick: bits</h2>
+  <p>To grade prediction we need a number for "how surprised were you." Information theory gives one: the bit. Guessing a fair coin, your average surprise is 1 bit, the most a yes-or-no can deliver. A loaded coin surprises you less, so fewer bits; a sure thing, zero. So on our scale 1 bit per symbol means no grip at all, a coin flip, and 0 bits means perfect prediction. This average surprise is Claude Shannon's entropy, the basis of information theory since 1948, and everything in the three charts below is built from it.</p>
+
+  <h2>Experiment 1: predict it</h2>
+  <p>The observer watches one cell over time and predicts the next value from the previous <code>k</code> values, where <code>k</code> is how much memory we allow. It learns on the first half of the data by tallying, for each pattern of <code>k</code> past symbols, how often a 0 or a 1 came next; turns the tally into a probability <code>p = (count + 1) / (total + 2)</code> (the +1 is a humility rule so a pattern seen once is not over-trusted); and is graded on fresh held-out data by the surprise <code>-log2(p)</code> of the true next symbol, averaged into bits per symbol. Order is trivially predicted (0 bits), chaos sits at a 1-bit wall no matter how much memory you give it, and the complex rule drops toward 0 once memory is large enough, then flattens. That flat level is the floor, the best this observer can do. For chaos the floor is a wall: the only way to know the next symbol is to run the whole world, with no shortcut, which is what Wolfram called computational irreducibility. Toggle the y-axis to accuracy to read the same story as percent correct.</p>
+
+  <div class="card">
+    <h3>1. Predict it</h3>
+    <p class="why">Move <code>k</code> (how much memory the observer gets); toggle the y-axis between error and accuracy. Black is your rule; faint lines are 250, 110, 30.</p>
+    <div class="ctl"><label>y-axis</label>
+      <span style="display:flex;gap:6px;flex:1">
+        <button class="rb mtog active" data-metric="err">error (bits)</button>
+        <button class="rb mtog" data-metric="acc">accuracy</button>
+      </span></div>
+    <div class="ctl"><label>context window k</label>
+      <input type="range" id="kSlide" min="0" max="14" step="1" value="6" style="flex:1" />
+      <span class="val" id="kVal"></span></div>
+    <canvas id="c1" class="chart"></canvas>
+    <div class="readout" id="r1"></div>
+    <div class="legend"><span><i class="dot" style="background:var(--teal)"></i>250</span><span><i class="dot" style="background:var(--gold)"></i>110</span><span><i class="dot" style="background:var(--brown)"></i>30</span><span><i class="dot" style="background:#111"></i>selected</span></div>
+  </div>
+
+  <h2>Experiment 2: re-grain it</h2>
+  <p>Now keep the world fixed and change what the observer looks at. Instead of one cell it reads the majority vote of a strip of width <code>w</code>. We compute the same best-prediction floor for each width and plot it. The floor moves, which is the lesson: what is knowable is not a property of the world alone, it depends on the observer's instrument. A wider or narrower window is a different observer and gets a different answer. (Honest detail: for Rule 110 the single cell does best and blurring hurts; the point is only that the floor depends on the grain.) For a cognitive scientist this is the interesting one: a bee that sees ultraviolet, an ear tuned elsewhere, an attention span of four items instead of seven, each is a different keyhole carving a different knowable world from the same reality.</p>
+
+  <div class="card">
+    <h3>2. Re-grain it</h3>
+    <p class="why">Slide the observation window width and watch the floor move. Selected rule only.</p>
+    <div class="ctl"><label>window width</label>
+      <input type="range" id="wSlide" min="0" max="5" step="1" value="0" style="flex:1" />
+      <span class="val" id="wVal"></span></div>
+    <canvas id="c2" class="chart"></canvas>
+    <div class="readout" id="r2"></div>
+    <div class="legend">higher floor = harder for that observer.</div>
+  </div>
+
+  <h2>Experiment 3: watch time appear</h2>
+  <p>Start the world ordered, a small solid block, and let the observer see only a coarse, blocky version: lump the row into blocks of <code>b</code> cells and look at each block's pattern. Measure how scrambled that blurry view looks, step by step, with entropy again, computed as <code>H = -(1/b) * sum over patterns v of f(v) * log2 f(v)</code> in bits per cell. From the ordered start the blur's entropy climbs, fastest for chaos and barely at all for order. The punchline: the rule is completely deterministic, nothing random is added. The growing disorder is not in the world's steps, it is in the observer's blurry view failing to keep up. The arrow of time, order giving way to disorder, is something a coarse-graining observer manufactures. This is the second law of thermodynamics retold as a fact about observers, which is Wolfram's argument for why we feel time the way we do.</p>
+
+  <div class="card">
+    <h3>3. Watch time appear</h3>
+    <p class="why">Pick the block size <code>b</code>; the curve runs from an ordered start. Black is your rule; faint lines are 250, 110, 30.</p>
+    <div class="ctl"><label>block size b</label>
+      <span id="bSeg" style="display:flex;gap:6px;flex:1">
+        <button class="rb bbtn" data-b="2">2</button>
+        <button class="rb bbtn" data-b="4">4</button>
+        <button class="rb bbtn" data-b="8">8</button>
+      </span>
+      <span class="val" id="bVal"></span></div>
+    <canvas id="c3" class="chart"></canvas>
+    <div class="readout" id="r3"></div>
+    <div class="legend"><span><i class="dot" style="background:var(--teal)"></i>250</span><span><i class="dot" style="background:var(--gold)"></i>110</span><span><i class="dot" style="background:var(--brown)"></i>30</span><span><i class="dot" style="background:#111"></i>selected</span></div>
+  </div>
+
+  <h2>What it adds up to</h2>
+  <p>One bounded observer, three faces of a single limit. Prediction runs into an irreducible floor, so some of the world cannot be compressed. Where that floor sits depends on the observer's grain, so what is knowable lives in the fit between world and observer, not in either alone. And running the observer forward, the arrow of time falls out of its coarse-graining. The bridge to cognitive science is direct: perception and thought are compression, the brain is a bounded observer making useful, lossy models of a world it can never fully hold, and what you can know, even your felt sense of time passing, is shaped by your limits as much as by what is out there.</p>
+
+  <h2>Is any of this new math?</h2>
+  <p>No, and that matters for trusting it. The tools are standard: Shannon's information theory (1948), simple memory-<code>k</code> prediction (n-gram models), Laplace smoothing, and block entropy. The deeper quantities the curves approach, the entropy rate and the predictable information, are studied formally in a field called computational mechanics. The only original move here is the framing, treating these three textbook measurements as one story about an observer. To go further you would reconstruct the system's smallest predictive model, an epsilon-machine, and use bias-corrected entropy estimates, which would sharpen the numbers without changing the shapes.</p>
+
+  <h2>Honest limits</h2>
+  <p>It is a toy: a cellular automaton is not the universe, so this shows a mechanism cleanly, it does not prove a worldview. The estimators are simple and slightly biased on small data, which is the little wiggle on the chaotic rule at high memory. These rules also lose some information at the micro level, so part of the rising disorder in experiment 3 is genuine, not purely the observer's blur; the cleanest version uses a reversible rule where the only source of rising disorder is the coarse-graining. And it is a classical, local model on purpose. There is a different kind of unpredictability in quantum physics, captured by Bell's theorem, that no model like this can reproduce. The wall this sandbox measures is the no-shortcut wall, not the quantum one.</p>
+
+  <h2>Mini-glossary</h2>
+  <div class="glossary">
+    <p><b>Bit</b> a unit of information or surprise, one yes-or-no's worth.<br/>
+    <b>Entropy</b> average surprise; high means unpredictable, low means predictable.<br/>
+    <b>Bits per symbol</b> the prediction error used here; 1 is a coin flip, 0 is perfect.<br/>
+    <b>Accuracy</b> the percentage of next-symbol guesses that are correct.<br/>
+    <b>Markov / order-k model</b> a predictor that uses the last <code>k</code> symbols.<br/>
+    <b>Cross-entropy / log-loss</b> the held-out average surprise, the main score.<br/>
+    <b>Laplace smoothing</b> adding 1 to each count so rare patterns are not over-trusted.<br/>
+    <b>Coarse-graining</b> looking at a blurred, summarized version instead of every detail.<br/>
+    <b>Computational irreducibility</b> when the only way to know the outcome is to run the whole process, no shortcut.<br/>
+    <b>Entropy rate</b> the unavoidable surprise per step that remains even with unlimited memory; the floor.</p>
+  </div>
+
+  <footer>
+    The math is standard information theory; the framing is part of a larger project, The Mirror and the Loom. Everything runs locally in your browser, no data leaves the page.
+  </footer>
+</div>
+
+<script>
+const TEAL="#2a9d8f",GOLD="#cf9a1e",BROWN="#9c5b34",SEL="#16130f",ACC="#9c5b34";
+const KS=Array.from({length:15},(_,i)=>i);
+const WIDTHS=[1,3,5,7,9,13];
+const BLOCKS=[2,4,8];
+const REFS=[250,110,30], REFCOL={250:TEAL,110:GOLD,30:BROWN};
+const cache=new Map();
+let state={rule:110,k:6,wi:0,b:4,metric:'err'};
+
+function table(rule){const t=new Uint8Array(8);for(let i=0;i<8;i++)t[i]=(rule>>i)&1;return t;}
+function evolve(rule,W,S,ic){const t=table(rule);let row=Uint8Array.from(ic);const h=new Uint8Array(W*S);
+ for(let s=0;s<S;s++){h.set(row,s*W);const nr=new Uint8Array(W);
+  for(let i=0;i<W;i++){const l=row[(i-1+W)%W],c=row[i],r=row[(i+1)%W];nr[i]=t[(l<<2)|(c<<1)|r];}row=nr;}return h;}
+function centerCol(h,W,S){const o=new Uint8Array(S),c=W>>1;for(let s=0;s<S;s++)o[s]=h[s*W+c];return o;}
+function majSeries(h,W,S,r){const o=new Uint8Array(S),c=W>>1,wdt=2*r+1;
+ for(let s=0;s<S;s++){let sum=0;for(let i=c-r;i<=c+r;i++)sum+=h[s*W+i];o[s]=(sum*2>wdt)?1:0;}return o;}
+function bitsForK(seq,k){const n=seq.length,ntr=n>>1;
+ if(k===0){let c1=0;for(let i=0;i<ntr;i++)c1+=seq[i];const p1=(c1+1)/(ntr+2);let ll=0,m=0,corr=0;
+  for(let i=ntr;i<n;i++){const y=seq[i];const p=y?p1:1-p1;ll+=-Math.log2(p);m++;corr+=(((p1>=.5)?1:0)===y)?1:0;}return[ll/m,corr/m];}
+ const size=1<<k,mask=size-1;const c0=new Float64Array(size),c1=new Float64Array(size);
+ let ctx=0;for(let i=0;i<k;i++)ctx=((ctx<<1)|seq[i])&mask;
+ for(let t=k;t<ntr;t++){const y=seq[t];if(y)c1[ctx]++;else c0[ctx]++;ctx=((ctx<<1)|y)&mask;}
+ let cx=0;for(let i=ntr-k;i<ntr;i++)cx=((cx<<1)|seq[i])&mask;
+ let ll=0,m=0,corr=0;
+ for(let t=ntr;t<n;t++){const a=c0[cx],b=c1[cx];const p1=(b+1)/(a+b+2);const y=seq[t];const p=y?p1:1-p1;
+  ll+=-Math.log2(p);corr+=(((p1>=.5)?1:0)===y)?1:0;m++;cx=((cx<<1)|y)&mask;}
+ return[ll/m,corr/m];}
+function blockEnt(h,off,W,b){const n=(W/b)|0;const cnt=new Float64Array(1<<b);
+ for(let j=0;j<n;j++){let v=0;for(let i=0;i<b;i++)v=(v<<1)|h[off+j*b+i];cnt[v]++;}
+ let H=0;for(let v=0;v<(1<<b);v++){if(cnt[v]>0){const p=cnt[v]/n;H+=-p*Math.log2(p);}}return H/b;}
+function randIC(W){const ic=new Uint8Array(W);for(let i=0;i<W;i++)ic[i]=Math.random()<.5?1:0;return ic;}
+
+function compute(rule){
+ if(cache.has(rule))return cache.get(rule);
+ const sW=361,sS=180;const sic=new Uint8Array(sW);sic[sW>>1]=1;const seed=evolve(rule,sW,sS,sic);
+ const W=241,S=5000;const hR=evolve(rule,W,S,randIC(W));
+ const seq=centerCol(hR,W,S);
+ const bitsK=KS.map(k=>{const[ll,ac]=bitsForK(seq,k);return{k,bits:ll,acc:ac};});
+ const floorW=WIDTHS.map((w,idx)=>{const r=(w-1)/2;const ms=majSeries(hR,W,S,r);
+   let best=9;for(let k=0;k<=8;k++){const[ll]=bitsForK(ms,k);if(ll<best)best=ll;}return{w,floor:best};});
+ const oW=600,oS=360;const oic=new Uint8Array(oW);for(let i=(oW>>1)-15;i<(oW>>1)+15;i++)oic[i]=1;
+ const hO=evolve(rule,oW,oS,oic);
+ const ent={};BLOCKS.forEach(b=>{const arr=new Float64Array(oS);for(let s=0;s<oS;s++)arr[s]=blockEnt(hO,s*oW,oW,b);ent[b]=arr;});
+ const obj={seed:{W:sW,S:sS,data:seed},bitsK,floorW,ent,oS};
+ cache.set(rule,obj);return obj;
+}
+
+function setup(cv){const dpr=window.devicePixelRatio||1;const r=cv.getBoundingClientRect();
+ const w=r.width||cv.clientWidth||300,h=parseInt(cv.style.height)||200;
+ cv.width=w*dpr;cv.height=h*dpr;const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,w,h};}
+function drawChart(cv,opts){const{ctx,w,h}=setup(cv);ctx.clearRect(0,0,w,h);
+ const pl=58,pr=12,pt=12,pb=30;const X0=pl,X1=w-pr,Y0=h-pb,Y1=pt;
+ const{xmin,xmax,ymin,ymax,series,marker,xlabel,ylabel,xticks,yticks,baseline}=opts;
+ const sx=v=>X0+(v-xmin)/(xmax-xmin)*(X1-X0);const sy=v=>Y0+(v-ymin)/(ymax-ymin)*(Y1-Y0);
+ ctx.strokeStyle="#e7e1d5";ctx.lineWidth=1;ctx.fillStyle="#8a857b";ctx.font="11px "+getComputedStyle(document.body).fontFamily;
+ (yticks||[ymin,(ymin+ymax)/2,ymax]).forEach(v=>{const y=sy(v);ctx.strokeStyle="#efeadf";ctx.beginPath();ctx.moveTo(X0,y);ctx.lineTo(X1,y);ctx.stroke();
+   ctx.fillStyle="#8a857b";ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText((Math.round(v*100)/100).toString(),X0-5,y);});
+ (xticks||[xmin,xmax]).forEach(v=>{const x=sx(v);ctx.fillStyle="#8a857b";ctx.textAlign="center";ctx.textBaseline="top";ctx.fillText(v.toString(),x,Y0+5);});
+ ctx.strokeStyle="#cfc9bd";ctx.beginPath();ctx.moveTo(X0,Y0);ctx.lineTo(X1,Y0);ctx.moveTo(X0,Y0);ctx.lineTo(X0,Y1);ctx.stroke();
+ if(baseline!=null){const yb=sy(baseline);ctx.strokeStyle="#cbb9ac";ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(X0,yb);ctx.lineTo(X1,yb);ctx.stroke();ctx.setLineDash([]);}
+ if(marker!=null){const x=sx(marker);ctx.strokeStyle="#cbb9ac";ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x,Y0);ctx.lineTo(x,Y1);ctx.stroke();ctx.setLineDash([]);}
+ series.forEach(s=>{ctx.globalAlpha=s.alpha==null?1:s.alpha;ctx.strokeStyle=s.color;ctx.lineWidth=s.width||1.5;ctx.beginPath();
+   s.xs.forEach((xv,i)=>{const x=sx(xv),y=sy(s.ys[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
+   if(s.dots){ctx.fillStyle=s.color;s.xs.forEach((xv,i)=>{ctx.beginPath();ctx.arc(sx(xv),sy(s.ys[i]),s.width?2.4:2,0,7);ctx.fill();});}});
+ ctx.globalAlpha=1;ctx.fillStyle="#8a857b";ctx.textAlign="center";ctx.textBaseline="bottom";if(xlabel)ctx.fillText(xlabel,(X0+X1)/2,h-1);
+ if(ylabel){ctx.save();ctx.translate(13,(Y0+Y1)/2);ctx.rotate(-Math.PI/2);ctx.fillStyle="#8a857b";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ylabel,0,0);ctx.restore();}
+}
+
+function drawSpacetime(){const o=compute(state.rule);const cv=document.getElementById("stCanvas");
+ cv.width=o.seed.W;cv.height=o.seed.S;const ctx=cv.getContext("2d");const img=ctx.createImageData(o.seed.W,o.seed.S);
+ for(let i=0;i<o.seed.data.length;i++){const v=o.seed.data[i]?20:255;const p=i*4;img.data[p]=v;img.data[p+1]=v;img.data[p+2]=v;img.data[p+3]=255;}
+ ctx.putImageData(img,0,0);}
+
+function render(){
+ document.getElementById("status").textContent="";
+ drawSpacetime();
+ const o=compute(state.rule);
+ const useAcc=state.metric==='acc';const pick=d=>useAcc?d.acc:d.bits;
+ const refSeries=REFS.map(r=>{const ro=compute(r);return{xs:KS,ys:ro.bitsK.map(pick),color:REFCOL[r],width:1.2,alpha:.32};});
+ const selS={xs:KS,ys:o.bitsK.map(pick),color:SEL,width:2,dots:true};
+ drawChart(document.getElementById("c1"),useAcc?
+   {xmin:0,xmax:14,ymin:0.45,ymax:1.02,xticks:[0,5,10,14],yticks:[0.5,0.75,1],baseline:0.5,
+    series:[...refSeries,selS],marker:state.k,xlabel:"context window k",ylabel:"accuracy (0.5 = coin flip)"}:
+   {xmin:0,xmax:14,ymin:0,ymax:1.05,xticks:[0,5,10,14],yticks:[0,0.5,1],baseline:1,
+    series:[...refSeries,selS],marker:state.k,xlabel:"context window k",ylabel:"prediction error (bits/sym)"});
+ const d=o.bitsK[state.k];
+ document.getElementById("kVal").textContent="k = "+state.k;
+ document.getElementById("r1").innerHTML="At k = "+state.k+": <b>"+(d.acc*100).toFixed(1)+"%</b> accuracy, <b>"+d.bits.toFixed(3)+"</b> bits/symbol. Floor error (best k): <b>"+Math.min(...o.bitsK.map(x=>x.bits)).toFixed(3)+"</b>.";
+ document.querySelectorAll(".mtog").forEach(btn=>btn.classList.toggle("active",btn.dataset.metric===state.metric));
+
+ drawChart(document.getElementById("c2"),{xmin:1,xmax:13,ymin:0,ymax:Math.max(0.4,Math.max(...o.floorW.map(f=>f.floor))*1.15),
+   xticks:[1,5,9,13],yticks:[0,0.2,0.4],series:[{xs:o.floorW.map(f=>f.w),ys:o.floorW.map(f=>f.floor),color:ACC,width:2,dots:true}],
+   marker:WIDTHS[state.wi],xlabel:"observation window width",ylabel:"best-case floor (bits/sym)"});
+ const fw=o.floorW[state.wi];
+ document.getElementById("wVal").textContent="width = "+fw.w;
+ document.getElementById("r2").innerHTML="Window width <b>"+fw.w+"</b>: predictive floor <b>"+fw.floor.toFixed(3)+"</b> bits/symbol.";
+
+ const refEnt=REFS.map(r=>{const ro=compute(r);return{xs:Array.from(ro.ent[state.b].keys()),ys:Array.from(ro.ent[state.b]),color:REFCOL[r],width:1.2,alpha:.32};});
+ const selEnt={xs:Array.from(o.ent[state.b].keys()),ys:Array.from(o.ent[state.b]),color:SEL,width:2};
+ drawChart(document.getElementById("c3"),{xmin:0,xmax:o.oS,ymin:0,ymax:1.05,xticks:[0,Math.round(o.oS/2),o.oS],yticks:[0,0.5,1],
+   series:[...refEnt,selEnt],xlabel:"time step",ylabel:"coarse entropy (bits/cell)"});
+ const fin=o.ent[state.b][o.oS-1];
+ document.getElementById("bVal").textContent="b = "+state.b;
+ document.getElementById("r3").innerHTML="Block size <b>"+state.b+"</b>: coarse entropy ends at <b>"+fin.toFixed(3)+"</b> bits/cell (started near 0).";
+ document.querySelectorAll(".bbtn").forEach(btn=>btn.classList.toggle("active",+btn.dataset.b===state.b));
+ document.querySelectorAll(".rb[data-rule]").forEach(btn=>btn.classList.toggle("active",+btn.dataset.rule===state.rule));
+ document.getElementById("ruleNum").value=state.rule;
+}
+
+function setRule(r){r=Math.max(0,Math.min(255,r|0));state.rule=r;
+ document.getElementById("status").textContent="computing…";
+ setTimeout(()=>{render();},10);}
+
+document.querySelectorAll(".rb[data-rule]").forEach(b=>b.addEventListener("click",()=>setRule(+b.dataset.rule)));
+document.getElementById("ruleNum").addEventListener("change",e=>setRule(+e.target.value));
+document.getElementById("kSlide").addEventListener("input",e=>{state.k=+e.target.value;render();});
+document.getElementById("wSlide").addEventListener("input",e=>{state.wi=+e.target.value;render();});
+document.querySelectorAll(".bbtn").forEach(b=>b.addEventListener("click",()=>{state.b=+b.dataset.b;render();}));
+document.querySelectorAll(".mtog").forEach(b=>b.addEventListener("click",()=>{state.metric=b.dataset.metric;render();}));
+window.addEventListener("resize",()=>render());
+
+REFS.forEach(compute);
+render();
+</script>
+</body>
+</html>

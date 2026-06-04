@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Mirror and the Loom: Bounded Observer Sandbox</title>
+<style>
+  :root{
+    --ink:#211f1c; --muted:#6b665d; --paper:#faf9f6; --card:#ffffff;
+    --border:#e7e1d5; --accent:#9c5b34; --teal:#2a9d8f; --gold:#cf9a1e; --brown:#9c5b34;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 22px 60px;}
+  h1{font-weight:600;font-size:25px;letter-spacing:.2px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 22px;max-width:760px;}
+  .rulebar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 18px;}
+  .rulebar label{font-size:13px;color:var(--muted);}
+  button.rb{font-family:var(--sans);font-size:14px;padding:7px 13px;border:1px solid var(--border);
+    background:var(--card);border-radius:9px;cursor:pointer;color:var(--ink);}
+  button.rb.active{border-color:var(--accent);background:#f6ece6;color:var(--accent);font-weight:600;}
+  input[type=number]{width:74px;font-size:14px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card);}
+  input[type=range]{accent-color:var(--accent);}
+  .top{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start;margin-bottom:8px;}
+  @media(max-width:760px){.top{grid-template-columns:1fr;}}
+  .stcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;}
+  .stcard h3{margin:0 0 8px;font-size:14px;font-weight:600;}
+  canvas.st{width:100%;height:auto;image-rendering:pixelated;border-radius:6px;border:1px solid var(--border);background:#fff;}
+  .lead{color:var(--muted);font-size:14px;max-width:1fr;align-self:center;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:18px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 16px 12px;}
+  .card h2{font-size:16px;font-weight:600;margin:0 0 2px;}
+  .why{color:var(--muted);font-size:13px;margin:0 0 12px;min-height:34px;}
+  .ctl{display:flex;align-items:center;gap:10px;margin:2px 0 8px;}
+  .ctl label{font-size:13px;color:var(--muted);min-width:118px;}
+  .ctl .val{font-family:var(--mono);font-size:13px;color:var(--accent);min-width:120px;text-align:right;}
+  canvas.chart{width:100%;height:200px;display:block;}
+  .readout{font-size:13px;color:var(--ink);margin-top:6px;min-height:20px;}
+  .readout b{color:var(--accent);font-weight:600;}
+  .legend{font-size:12px;color:var(--muted);margin-top:4px;}
+  .legend span{display:inline-block;margin-right:12px;}
+  .dot{display:inline-block;width:9px;height:3px;vertical-align:middle;margin-right:4px;border-radius:1px;}
+  footer{margin-top:26px;color:var(--muted);font-size:12.5px;line-height:1.6;border-top:1px solid var(--border);padding-top:14px;}
+  footer b{color:var(--ink);font-weight:600;}
+  code{font-family:var(--mono);background:#f1ece2;padding:1px 5px;border-radius:5px;font-size:12.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The bounded observer, in your browser</h1>
+  <p class="sub">One observer, one computationally irreducible world, three views of the same limit: how much it can predict, how its grain changes what is knowable, and how its coarse-graining manufactures the arrow of time. Pick a rule and move the sliders.</p>
+
+  <div class="rulebar">
+    <label>World (elementary CA rule):</label>
+    <button class="rb" data-rule="250">250 order</button>
+    <button class="rb" data-rule="90">90 fractal</button>
+    <button class="rb" data-rule="110">110 complex</button>
+    <button class="rb" data-rule="30">30 chaos</button>
+    <span style="color:var(--muted);font-size:13px;">or</span>
+    <input type="number" id="ruleNum" min="0" max="255" step="1" value="110" />
+    <span id="status" style="font-size:12.5px;color:var(--muted);"></span>
+  </div>
+
+  <div class="top">
+    <div class="stcard">
+      <h3>The rule (single-seed spacetime)</h3>
+      <canvas id="stCanvas" class="st" width="361" height="180"></canvas>
+    </div>
+    <p class="lead">The top image is the world running from a single black cell. Below, the observer never sees this whole picture. In demos 1 and 2 it watches only the center column over time. In demo 3 it can only see a coarse, blocky version. Everything it knows is squeezed through that narrow channel.</p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>1. Predict it</h2>
+      <p class="why">Shown: prediction error vs how many past symbols (k) the observer may use. Lower is better, 1 bit is a coin flip, 0 is perfect. How it is derived: on the first half of the center-cell stream the observer tallies how often each k-symbol pattern was followed by 0 or 1, then is graded on the held-out second half by the surprise of the true next symbol, averaged to bits/symbol. Black is your rule; faint lines are 250, 110, 30.</p>
+      <div class="ctl"><label>y-axis</label>
+        <span style="display:flex;gap:6px;flex:1">
+          <button class="rb mtog active" data-metric="err">error (bits)</button>
+          <button class="rb mtog" data-metric="acc">accuracy</button>
+        </span></div>
+      <div class="ctl"><label>context window k</label>
+        <input type="range" id="kSlide" min="0" max="14" step="1" value="6" style="flex:1" />
+        <span class="val" id="kVal"></span></div>
+      <canvas id="c1" class="chart"></canvas>
+      <div class="readout" id="r1"></div>
+      <div class="legend"><span><i class="dot" style="background:var(--teal)"></i>250</span><span><i class="dot" style="background:var(--gold)"></i>110</span><span><i class="dot" style="background:var(--brown)"></i>30</span><span><i class="dot" style="background:#111"></i>selected</span></div>
+    </div>
+
+    <div class="card">
+      <h2>2. Re-grain it</h2>
+      <p class="why">Shown: the best prediction error the observer can reach (lowest over all k) when it views the same world through a coarser channel. How it is derived: instead of one cell it reads the majority vote of a width-w strip over time, and we take the floor of that channel's error. Same world, different observer, so the floor moves with the channel. Try Rule 30 to see this panel come alive.</p>
+      <div class="ctl"><label>window width</label>
+        <input type="range" id="wSlide" min="0" max="5" step="1" value="0" style="flex:1" />
+        <span class="val" id="wVal"></span></div>
+      <canvas id="c2" class="chart"></canvas>
+      <div class="readout" id="r2"></div>
+      <div class="legend">selected rule only. higher floor = harder for that observer.</div>
+    </div>
+
+    <div class="card">
+      <h2>3. Watch time appear</h2>
+      <p class="why">Shown: how disordered a coarse view looks as time runs, starting from an ordered state. Lower is ordered, higher is scrambled. How it is derived: each step, lump the row into blocks of b cells and take the Shannon entropy of the block-pattern frequencies (bits per cell). The micro-rule is deterministic, yet the coarse entropy still climbs, most for chaos. The arrow of time is in the grain.</p>
+      <div class="ctl"><label>block size b</label>
+        <span id="bSeg" style="display:flex;gap:6px;flex:1">
+          <button class="rb bbtn" data-b="2">2</button>
+          <button class="rb bbtn" data-b="4">4</button>
+          <button class="rb bbtn" data-b="8">8</button>
+        </span>
+        <span class="val" id="bVal"></span></div>
+      <canvas id="c3" class="chart"></canvas>
+      <div class="readout" id="r3"></div>
+      <div class="legend"><span><i class="dot" style="background:var(--teal)"></i>250</span><span><i class="dot" style="background:var(--gold)"></i>110</span><span><i class="dot" style="background:var(--brown)"></i>30</span><span><i class="dot" style="background:#111"></i>selected</span></div>
+    </div>
+  </div>
+
+  <footer>
+    <b>What this is.</b> A demonstration, not a proof. It quantifies one mechanic: a bounded observer must compress, its predictive grip asymptotes at an irreducible floor, that floor is observer-and-grain-relative, and iterating the coarse view in time produces an arrow.<br/>
+    <b>Two honest limits.</b> Elementary CAs are not reversible, so part of the entropy rise is genuine micro-information loss, not purely coarse-graining; the rigorous version uses a reversible CA. And this is a local classical model, so by Bell's theorem it cannot reproduce quantum correlations. The floor here is the computational-irreducibility floor; Bell nonlocality is a different floor no local model reaches.
+  </footer>
+</div>
+
+<script>
+const TEAL="#2a9d8f",GOLD="#cf9a1e",BROWN="#9c5b34",SEL="#16130f",ACC="#9c5b34";
+const KS=Array.from({length:15},(_,i)=>i);
+const WIDTHS=[1,3,5,7,9,13];
+const BLOCKS=[2,4,8];
+const REFS=[250,110,30], REFCOL={250:TEAL,110:GOLD,30:BROWN};
+const cache=new Map();
+let state={rule:110,k:6,wi:0,b:4,metric:'err'};
+
+function table(rule){const t=new Uint8Array(8);for(let i=0;i<8;i++)t[i]=(rule>>i)&1;return t;}
+function evolve(rule,W,S,ic){const t=table(rule);let row=Uint8Array.from(ic);const h=new Uint8Array(W*S);
+ for(let s=0;s<S;s++){h.set(row,s*W);const nr=new Uint8Array(W);
+  for(let i=0;i<W;i++){const l=row[(i-1+W)%W],c=row[i],r=row[(i+1)%W];nr[i]=t[(l<<2)|(c<<1)|r];}row=nr;}return h;}
+function centerCol(h,W,S){const o=new Uint8Array(S),c=W>>1;for(let s=0;s<S;s++)o[s]=h[s*W+c];return o;}
+function majSeries(h,W,S,r){const o=new Uint8Array(S),c=W>>1,wdt=2*r+1;
+ for(let s=0;s<S;s++){let sum=0;for(let i=c-r;i<=c+r;i++)sum+=h[s*W+i];o[s]=(sum*2>wdt)?1:0;}return o;}
+function bitsForK(seq,k){const n=seq.length,ntr=n>>1;
+ if(k===0){let c1=0;for(let i=0;i<ntr;i++)c1+=seq[i];const p1=(c1+1)/(ntr+2);let ll=0,m=0,corr=0;
+  for(let i=ntr;i<n;i++){const y=seq[i];const p=y?p1:1-p1;ll+=-Math.log2(p);m++;corr+=(((p1>=.5)?1:0)===y)?1:0;}return[ll/m,corr/m];}
+ const size=1<<k,mask=size-1;const c0=new Float64Array(size),c1=new Float64Array(size);
+ let ctx=0;for(let i=0;i<k;i++)ctx=((ctx<<1)|seq[i])&mask;
+ for(let t=k;t<ntr;t++){const y=seq[t];if(y)c1[ctx]++;else c0[ctx]++;ctx=((ctx<<1)|y)&mask;}
+ let cx=0;for(let i=ntr-k;i<ntr;i++)cx=((cx<<1)|seq[i])&mask;
+ let ll=0,m=0,corr=0;
+ for(let t=ntr;t<n;t++){const a=c0[cx],b=c1[cx];const p1=(b+1)/(a+b+2);const y=seq[t];const p=y?p1:1-p1;
+  ll+=-Math.log2(p);corr+=(((p1>=.5)?1:0)===y)?1:0;m++;cx=((cx<<1)|y)&mask;}
+ return[ll/m,corr/m];}
+function blockEnt(h,off,W,b){const n=(W/b)|0;const cnt=new Float64Array(1<<b);
+ for(let j=0;j<n;j++){let v=0;for(let i=0;i<b;i++)v=(v<<1)|h[off+j*b+i];cnt[v]++;}
+ let H=0;for(let v=0;v<(1<<b);v++){if(cnt[v]>0){const p=cnt[v]/n;H+=-p*Math.log2(p);}}return H/b;}
+function randIC(W){const ic=new Uint8Array(W);for(let i=0;i<W;i++)ic[i]=Math.random()<.5?1:0;return ic;}
+
+function compute(rule){
+ if(cache.has(rule))return cache.get(rule);
+ const sW=361,sS=180;const sic=new Uint8Array(sW);sic[sW>>1]=1;const seed=evolve(rule,sW,sS,sic);
+ const W=241,S=5000;const hR=evolve(rule,W,S,randIC(W));
+ const seq=centerCol(hR,W,S);
+ const bitsK=KS.map(k=>{const[ll,ac]=bitsForK(seq,k);return{k,bits:ll,acc:ac};});
+ const floorW=WIDTHS.map((w,idx)=>{const r=(w-1)/2;const ms=majSeries(hR,W,S,r);
+   let best=9;for(let k=0;k<=8;k++){const[ll]=bitsForK(ms,k);if(ll<best)best=ll;}return{w,floor:best};});
+ const oW=600,oS=360;const oic=new Uint8Array(oW);for(let i=(oW>>1)-15;i<(oW>>1)+15;i++)oic[i]=1;
+ const hO=evolve(rule,oW,oS,oic);
+ const ent={};BLOCKS.forEach(b=>{const arr=new Float64Array(oS);for(let s=0;s<oS;s++)arr[s]=blockEnt(hO,s*oW,oW,b);ent[b]=arr;});
+ const obj={seed:{W:sW,S:sS,data:seed},bitsK,floorW,ent,oS};
+ cache.set(rule,obj);return obj;
+}
+
+function setup(cv){const dpr=window.devicePixelRatio||1;const r=cv.getBoundingClientRect();
+ const w=r.width||cv.clientWidth||300,h=parseInt(cv.style.height)||200;
+ cv.width=w*dpr;cv.height=h*dpr;const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,w,h};}
+function drawChart(cv,opts){const{ctx,w,h}=setup(cv);ctx.clearRect(0,0,w,h);
+ const pl=58,pr=12,pt=12,pb=30;const X0=pl,X1=w-pr,Y0=h-pb,Y1=pt;
+ const{xmin,xmax,ymin,ymax,series,marker,xlabel,ylabel,xticks,yticks,baseline}=opts;
+ const sx=v=>X0+(v-xmin)/(xmax-xmin)*(X1-X0);const sy=v=>Y0+(v-ymin)/(ymax-ymin)*(Y1-Y0);
+ ctx.strokeStyle="#e7e1d5";ctx.lineWidth=1;ctx.fillStyle="#8a857b";ctx.font="11px "+getComputedStyle(document.body).fontFamily;
+ (yticks||[ymin,(ymin+ymax)/2,ymax]).forEach(v=>{const y=sy(v);ctx.strokeStyle="#efeadf";ctx.beginPath();ctx.moveTo(X0,y);ctx.lineTo(X1,y);ctx.stroke();
+   ctx.fillStyle="#8a857b";ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText((Math.round(v*100)/100).toString(),X0-5,y);});
+ (xticks||[xmin,xmax]).forEach(v=>{const x=sx(v);ctx.fillStyle="#8a857b";ctx.textAlign="center";ctx.textBaseline="top";ctx.fillText(v.toString(),x,Y0+5);});
+ ctx.strokeStyle="#cfc9bd";ctx.beginPath();ctx.moveTo(X0,Y0);ctx.lineTo(X1,Y0);ctx.moveTo(X0,Y0);ctx.lineTo(X0,Y1);ctx.stroke();
+ if(baseline!=null){const yb=sy(baseline);ctx.strokeStyle="#cbb9ac";ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(X0,yb);ctx.lineTo(X1,yb);ctx.stroke();ctx.setLineDash([]);}
+ if(marker!=null){const x=sx(marker);ctx.strokeStyle="#cbb9ac";ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x,Y0);ctx.lineTo(x,Y1);ctx.stroke();ctx.setLineDash([]);}
+ series.forEach(s=>{ctx.globalAlpha=s.alpha==null?1:s.alpha;ctx.strokeStyle=s.color;ctx.lineWidth=s.width||1.5;ctx.beginPath();
+   s.xs.forEach((xv,i)=>{const x=sx(xv),y=sy(s.ys[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
+   if(s.dots){ctx.fillStyle=s.color;s.xs.forEach((xv,i)=>{ctx.beginPath();ctx.arc(sx(xv),sy(s.ys[i]),s.width?2.4:2,0,7);ctx.fill();});}});
+ ctx.globalAlpha=1;ctx.fillStyle="#8a857b";ctx.textAlign="center";ctx.textBaseline="bottom";if(xlabel)ctx.fillText(xlabel,(X0+X1)/2,h-1);
+ if(ylabel){ctx.save();ctx.translate(13,(Y0+Y1)/2);ctx.rotate(-Math.PI/2);ctx.fillStyle="#8a857b";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ylabel,0,0);ctx.restore();}
+}
+
+function drawSpacetime(){const o=compute(state.rule);const cv=document.getElementById("stCanvas");
+ cv.width=o.seed.W;cv.height=o.seed.S;const ctx=cv.getContext("2d");const img=ctx.createImageData(o.seed.W,o.seed.S);
+ for(let i=0;i<o.seed.data.length;i++){const v=o.seed.data[i]?20:255;const p=i*4;img.data[p]=v;img.data[p+1]=v;img.data[p+2]=v;img.data[p+3]=255;}
+ ctx.putImageData(img,0,0);}
+
+function render(){
+ document.getElementById("status").textContent="";
+ drawSpacetime();
+ const o=compute(state.rule);
+ const useAcc=state.metric==='acc';const pick=d=>useAcc?d.acc:d.bits;
+ const refSeries=REFS.map(r=>{const ro=compute(r);return{xs:KS,ys:ro.bitsK.map(pick),color:REFCOL[r],width:1.2,alpha:.32};});
+ const selS={xs:KS,ys:o.bitsK.map(pick),color:SEL,width:2,dots:true};
+ drawChart(document.getElementById("c1"),useAcc?
+   {xmin:0,xmax:14,ymin:0.45,ymax:1.02,xticks:[0,5,10,14],yticks:[0.5,0.75,1],baseline:0.5,
+    series:[...refSeries,selS],marker:state.k,xlabel:"context window k",ylabel:"accuracy (0.5 = coin flip)"}:
+   {xmin:0,xmax:14,ymin:0,ymax:1.05,xticks:[0,5,10,14],yticks:[0,0.5,1],baseline:1,
+    series:[...refSeries,selS],marker:state.k,xlabel:"context window k",ylabel:"prediction error (bits/sym)"});
+ const d=o.bitsK[state.k];
+ document.getElementById("kVal").textContent="k = "+state.k;
+ document.getElementById("r1").innerHTML="At k = "+state.k+": <b>"+(d.acc*100).toFixed(1)+"%</b> accuracy, <b>"+d.bits.toFixed(3)+"</b> bits/symbol. Floor error (best k): <b>"+Math.min(...o.bitsK.map(x=>x.bits)).toFixed(3)+"</b>.";
+ document.querySelectorAll(".mtog").forEach(btn=>btn.classList.toggle("active",btn.dataset.metric===state.metric));
+
+ drawChart(document.getElementById("c2"),{xmin:1,xmax:13,ymin:0,ymax:Math.max(0.4,Math.max(...o.floorW.map(f=>f.floor))*1.15),
+   xticks:[1,5,9,13],yticks:[0,0.2,0.4],series:[{xs:o.floorW.map(f=>f.w),ys:o.floorW.map(f=>f.floor),color:ACC,width:2,dots:true}],
+   marker:WIDTHS[state.wi],xlabel:"observation window width",ylabel:"best-case floor (bits/sym)"});
+ const fw=o.floorW[state.wi];
+ document.getElementById("wVal").textContent="width = "+fw.w;
+ document.getElementById("r2").innerHTML="Window width <b>"+fw.w+"</b>: predictive floor <b>"+fw.floor.toFixed(3)+"</b> bits/symbol.";
+
+ const refEnt=REFS.map(r=>{const ro=compute(r);return{xs:Array.from(ro.ent[state.b].keys()),ys:Array.from(ro.ent[state.b]),color:REFCOL[r],width:1.2,alpha:.32};});
+ const selEnt={xs:Array.from(o.ent[state.b].keys()),ys:Array.from(o.ent[state.b]),color:SEL,width:2};
+ drawChart(document.getElementById("c3"),{xmin:0,xmax:o.oS,ymin:0,ymax:1.05,xticks:[0,Math.round(o.oS/2),o.oS],yticks:[0,0.5,1],
+   series:[...refEnt,selEnt],xlabel:"time step",ylabel:"coarse entropy (bits/cell)"});
+ const fin=o.ent[state.b][o.oS-1];
+ document.getElementById("bVal").textContent="b = "+state.b;
+ document.getElementById("r3").innerHTML="Block size <b>"+state.b+"</b>: coarse entropy ends at <b>"+fin.toFixed(3)+"</b> bits/cell (started near 0).";
+ document.querySelectorAll(".bbtn").forEach(btn=>btn.classList.toggle("active",+btn.dataset.b===state.b));
+ document.querySelectorAll(".rb[data-rule]").forEach(btn=>btn.classList.toggle("active",+btn.dataset.rule===state.rule));
+ document.getElementById("ruleNum").value=state.rule;
+}
+
+function setRule(r){r=Math.max(0,Math.min(255,r|0));state.rule=r;
+ document.getElementById("status").textContent="computing…";
+ setTimeout(()=>{render();},10);}
+
+document.querySelectorAll(".rb[data-rule]").forEach(b=>b.addEventListener("click",()=>setRule(+b.dataset.rule)));
+document.getElementById("ruleNum").addEventListener("change",e=>setRule(+e.target.value));
+document.getElementById("kSlide").addEventListener("input",e=>{state.k=+e.target.value;render();});
+document.getElementById("wSlide").addEventListener("input",e=>{state.wi=+e.target.value;render();});
+document.querySelectorAll(".bbtn").forEach(b=>b.addEventListener("click",()=>{state.b=+b.dataset.b;render();}));
+document.querySelectorAll(".mtog").forEach(b=>b.addEventListener("click",()=>{state.metric=b.dataset.metric;render();}));
+window.addEventListener("resize",()=>render());
+
+REFS.forEach(compute);
+render();
+</script>
+</body>
+</html>
