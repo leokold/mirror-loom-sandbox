@@ -75,9 +75,11 @@
     <h3>The rule, running from a single black cell</h3>
     <canvas id="stCanvas" class="st" width="361" height="180"></canvas>
   </div>
+  <p style="text-align:center;margin:2px 0 10px;"><a href="how-to-read-rules.html" style="color:var(--accent);font-size:14px;text-decoration:none;border-bottom:1px solid var(--border);">New to this? How to read these rules &rarr;</a></p>
 
   <h2>The measuring stick: bits</h2>
   <p>To grade prediction we need a number for "how surprised were you." Information theory gives one: the bit. Guessing a fair coin, your average surprise is 1 bit, the most a yes-or-no can deliver. A loaded coin surprises you less, so fewer bits; a sure thing, zero. So on our scale 1 bit per symbol means no grip at all, a coin flip, and 0 bits means perfect prediction. This average surprise is Claude Shannon's entropy, the basis of information theory since 1948, and everything in the three charts below is built from it.</p>
+  <p style="text-align:center;margin:2px 0 12px;"><a href="how-the-graphs-work.html" style="color:var(--accent);font-size:14px;text-decoration:none;border-bottom:1px solid var(--border);">Want the math? How the lower graphs are calculated &rarr;</a></p>
 
   <h2>Experiment 1: predict it</h2>
   <p>The observer watches one cell over time and predicts the next value from the previous <code>k</code> values, where <code>k</code> is how much memory we allow. It learns on the first half of the data by tallying, for each pattern of <code>k</code> past symbols, how often a 0 or a 1 came next; turns the tally into a probability <code>p = (count + 1) / (total + 2)</code> (the +1 is a humility rule so a pattern seen once is not over-trusted); and is graded on fresh held-out data by the surprise <code>-log2(p)</code> of the true next symbol, averaged into bits per symbol. Order is trivially predicted (0 bits), chaos sits at a 1-bit wall no matter how much memory you give it, and the complex rule drops toward 0 once memory is large enough, then flattens. That flat level is the floor, the best this observer can do. For chaos the floor is a wall: the only way to know the next symbol is to run the whole world, with no shortcut, which is what Wolfram called computational irreducibility. Toggle the y-axis to accuracy to read the same story as percent correct.</p>

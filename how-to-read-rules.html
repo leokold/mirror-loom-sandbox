@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>How to read these rules</title>
+<style>
+  :root{
+    --ink:#211f1c; --muted:#6b665d; --paper:#faf9f6; --card:#ffffff;
+    --border:#e7e1d5; --accent:#9c5b34; --teal:#2a9d8f; --gold:#cf9a1e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;}
+  .wrap{max-width:760px;margin:0 auto;padding:34px 22px 70px;}
+  h1{font-weight:600;font-size:27px;letter-spacing:.2px;margin:0 0 6px;}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 6px;}
+  .back{font-size:14px;color:var(--accent);text-decoration:none;border-bottom:1px solid var(--border);}
+  h2{font-size:20px;font-weight:600;margin:32px 0 8px;}
+  p{font-size:16.5px;line-height:1.68;margin:0 0 14px;color:#2b2823;}
+  code{font-family:var(--mono);background:#f1ece2;padding:1px 5px;border-radius:5px;font-size:13.5px;}
+  .fig{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 16px 14px;margin:10px 0 6px;}
+  .fig .cap{font-size:13px;color:var(--muted);margin:10px 0 0;line-height:1.5;}
+  .lbl{font-size:12px;color:var(--muted);text-align:center;margin-top:5px;}
+  .rulegrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:6px 0;}
+  .rcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;}
+  .rcard h3{margin:0 0 2px;font-size:15px;font-weight:600;color:var(--accent);}
+  .rcard .tag{font-size:12px;color:var(--muted);margin:0 0 10px;}
+  canvas.st{width:100%;height:auto;image-rendering:pixelated;border:1px solid var(--border);border-radius:6px;background:#fff;display:block;}
+  .rcard p{font-size:13.5px;line-height:1.55;margin:10px 0 0;color:#2b2823;}
+  .flex{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:18px;}
+  .stack{display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .arrow{font-size:24px;color:var(--muted);}
+  .bin{font-family:var(--mono);font-size:15px;color:var(--ink);text-align:center;margin-top:12px;}
+  .bin b{color:var(--accent);}
+  footer{margin-top:34px;color:var(--muted);font-size:13px;line-height:1.6;border-top:1px solid var(--border);padding-top:14px;}
+  @media(max-width:560px){.rulegrid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>How to read these rules</h1>
+  <p class="sub">A two-minute primer on the cellular automata behind the sandbox.</p>
+  <a class="back" href="index.html">&larr; Back to the sandbox</a>
+
+  <h2>Down the page is forward in time</h2>
+  <p>A row of squares is the world at one instant. White is 0, black is 1. The top row is the starting state, and each row beneath it is the world one tick later, so reading down the page is watching time run. The diagrams in the sandbox are exactly this, just smaller, with hundreds of rows stacked.</p>
+
+  <h2>Each cell is copied from three cells above it</h2>
+  <p>To fill in a cell, look at the row directly above and take three cells: the one up and to the left, the one straight up, and the one up and to the right. Each is 0 or 1, so the three together form one of eight little patterns. A rule is nothing more than a decision, for each of those eight patterns, whether the cell below becomes black or white.</p>
+  <div class="fig">
+    <div class="flex" id="updateFig"></div>
+    <p class="cap">Three cells decide one cell. The rule supplies the answer for every possible trio.</p>
+  </div>
+
+  <h2>The rule number is just that table</h2>
+  <p>Three cells give eight patterns, running from <code>111</code> down to <code>000</code>. Write down what each one turns into and you get eight 0s and 1s. Read those eight as a binary number and you have the rule's name, somewhere from 0 to 255. That is Stephen Wolfram's numbering. Here is Rule 90, whose answer is simply "black when exactly one neighbor is black," ignoring the middle cell.</p>
+  <div class="fig">
+    <div class="flex" id="tableFig"></div>
+    <div class="bin" id="tableBin"></div>
+    <p class="cap">Each trio (top) maps to one output (bottom). Reading the eight outputs from <code>111</code> to <code>000</code> gives the binary number 90.</p>
+  </div>
+
+  <h2>The four rules, first rows</h2>
+  <p>Same starting state for all four: a single black cell in the middle of a white row. Watch how differently they grow. The teal column is the one cell the sandbox observer actually watches, read straight down as a stream of 0s and 1s.</p>
+  <div class="rulegrid">
+    <div class="rcard"><h3>Rule 250</h3><div class="tag">order &middot; left OR right</div>
+      <canvas id="cv250" class="st"></canvas>
+      <p>The simplest case. From one seed it grows a plain, regular triangle that repeats the same motif forever. Whatever you have seen, you already know what comes next.</p></div>
+    <div class="rcard"><h3>Rule 90</h3><div class="tag">fractal &middot; left XOR right</div>
+      <canvas id="cv90" class="st"></canvas>
+      <p>A cell turns black when exactly one neighbor is black. That single rule draws the Sierpinski triangle, the same shape nested inside itself at every scale.</p></div>
+    <div class="rcard"><h3>Rule 110</h3><div class="tag">complex &middot; universal</div>
+      <canvas id="cv110" class="st"></canvas>
+      <p>Structured shapes that drift sideways and collide. The interactions are rich enough to carry out any computation, which makes this rule a universal computer.</p></div>
+    <div class="rcard"><h3>Rule 30</h3><div class="tag">chaos &middot; random generator</div>
+      <canvas id="cv30" class="st"></canvas>
+      <p>From one black cell it boils into static. One side settles into stripes while the other churns. Wolfram used this rule's center column as a random-number generator.</p></div>
+  </div>
+  <p style="font-size:14px;color:var(--muted);margin-top:8px;">From a single seed the action spreads out from the middle, so the edges stay white at first and some center columns are quiet. The sandbox runs each rule from a full random row instead, which fills the screen and makes the watched column busier.</p>
+
+  <h2>What the observer reads</h2>
+  <p>The grid of cells, evolving by the rule, is the world. The observer in the sandbox is not one of those cells. It sits outside and reads only the teal center column, straight down, as a stream of 0s and 1s. All three experiments ask the same thing: how much of the world can that one narrow stream let it reconstruct.</p>
+  <a class="back" href="index.html">&larr; Back to the sandbox</a>
+
+  <footer>Elementary cellular automata, numbered 0 to 255 after Stephen Wolfram. Companion to the bounded-observer sandbox.</footer>
+</div>
+
+<script>
+(function(){
+  var INK="#211f1c", BORD="#e7e1d5", TEAL="#2a9d8f", PAPER="#faf9f6";
+
+  function cellDiv(v,size,opts){
+    opts=opts||{};
+    var d=document.createElement('div');
+    d.style.width=size+'px';d.style.height=size+'px';d.style.boxSizing='border-box';
+    d.style.border='1px solid '+BORD;d.style.borderRadius='2px';
+    d.style.background=v?INK:'#fff';
+    if(opts.track){d.style.outline='2px solid '+TEAL;d.style.outlineOffset='-1px';}
+    if(opts.text){d.style.background='#fff';d.style.color=opts.textColor||'#b9b2a4';
+      d.style.fontFamily='ui-monospace,Menlo,monospace';d.style.fontSize=(size*0.6)+'px';
+      d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';d.textContent=opts.text;}
+    return d;
+  }
+  function rowDiv(arr,size){
+    var r=document.createElement('div');r.style.display='flex';r.style.gap='2px';
+    arr.forEach(function(v){r.appendChild(cellDiv(v,size));});
+    return r;
+  }
+  function lbl(t){var l=document.createElement('div');l.className='lbl';l.textContent=t;return l;}
+  function stk(){var s=document.createElement('div');s.className='stack';return s;}
+  function arrowEl(ch){var a=document.createElement('div');a.className='arrow';a.textContent=ch;return a;}
+
+  // Section 2: one update. neighborhood -> ? (rule decides)
+  var uf=document.getElementById('updateFig');
+  var a=stk(); a.appendChild(rowDiv([1,1,0],30)); a.appendChild(lbl('up-left   up   up-right')); uf.appendChild(a);
+  uf.appendChild(arrowEl('↓'));
+  var b=stk(); var qrow=document.createElement('div'); qrow.appendChild(cellDiv(0,30,{text:'?'})); b.appendChild(qrow); b.appendChild(lbl('the rule decides')); uf.appendChild(b);
+
+  // Section 3: Rule 90 table, patterns 7..0
+  var tf=document.getElementById('tableFig');
+  var bits=[];
+  for(var n=7;n>=0;n--){
+    var l=(n>>2)&1,c=(n>>1)&1,r=n&1,o=(90>>n)&1; bits.push(o);
+    var col=stk();
+    col.appendChild(rowDiv([l,c,r],15));
+    col.appendChild(arrowEl('↓'));
+    var orow=document.createElement('div'); orow.appendChild(cellDiv(o,15,{track:true})); col.appendChild(orow);
+    tf.appendChild(col);
+  }
+  document.getElementById('tableBin').innerHTML='outputs &nbsp; '+bits.join('&nbsp;')+' &nbsp;=&nbsp; <b>90</b>';
+
+  // Section 4: spacetime for each rule, single seed
+  function evolve(rule,W,S){
+    var t=[],p; for(p=0;p<8;p++)t[p]=(rule>>p)&1;
+    var cur=new Array(W); for(var i=0;i<W;i++)cur[i]=0; cur[W>>1]=1;
+    var rows=[cur.slice()];
+    for(var s=1;s<S;s++){
+      var nx=new Array(W);
+      for(i=0;i<W;i++){var L=cur[(i-1+W)%W],C=cur[i],R=cur[(i+1)%W];nx[i]=t[(L<<2)|(C<<1)|R];}
+      rows.push(nx); cur=nx;
+    }
+    return rows;
+  }
+  function draw(id,rule){
+    var W=29,S=15,cell=16,hi=W>>1;
+    var rows=evolve(rule,W,S);
+    var cv=document.getElementById(id);
+    cv.width=W*cell; cv.height=S*cell;
+    var x=cv.getContext('2d');
+    x.fillStyle='#fff'; x.fillRect(0,0,cv.width,cv.height);
+    for(var s=0;s<S;s++)for(var i=0;i<W;i++){ if(rows[s][i]){x.fillStyle=INK;x.fillRect(i*cell,s*cell,cell,cell);} }
+    x.strokeStyle=BORD; x.lineWidth=1;
+    for(i=0;i<=W;i++){x.beginPath();x.moveTo(i*cell+0.5,0);x.lineTo(i*cell+0.5,S*cell);x.stroke();}
+    for(s=0;s<=S;s++){x.beginPath();x.moveTo(0,s*cell+0.5);x.lineTo(W*cell,s*cell+0.5);x.stroke();}
+    x.fillStyle='rgba(42,157,143,0.16)'; x.fillRect(hi*cell,0,cell,S*cell);
+    x.strokeStyle=TEAL; x.lineWidth=2; x.strokeRect(hi*cell+1,1,cell-2,S*cell-2);
+  }
+  draw('cv250',250); draw('cv90',90); draw('cv110',110); draw('cv30',30);
+})();
+</script>
+</body>
+</html>

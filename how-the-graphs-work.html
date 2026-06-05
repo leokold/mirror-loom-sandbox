@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>How the lower graphs are calculated</title>
+<style>
+  :root{
+    --ink:#211f1c; --muted:#6b665d; --paper:#faf9f6; --card:#ffffff;
+    --border:#e7e1d5; --accent:#9c5b34; --teal:#2a9d8f; --gold:#cf9a1e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;}
+  .wrap{max-width:760px;margin:0 auto;padding:34px 22px 70px;}
+  h1{font-weight:600;font-size:27px;letter-spacing:.2px;margin:0 0 6px;}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 6px;}
+  .back{font-size:14px;color:var(--accent);text-decoration:none;border-bottom:1px solid var(--border);}
+  h2{font-size:20px;font-weight:600;margin:34px 0 8px;}
+  h3{font-size:15px;font-weight:600;margin:18px 0 4px;color:var(--accent);}
+  p{font-size:16.5px;line-height:1.68;margin:0 0 14px;color:#2b2823;}
+  code{font-family:var(--mono);background:#f1ece2;padding:1px 5px;border-radius:5px;font-size:13.5px;}
+  .eq{font-family:var(--mono);font-size:14px;background:#f6f1e7;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:8px 0 14px;overflow-x:auto;white-space:nowrap;}
+  .steps{margin:0 0 14px;padding-left:0;list-style:none;counter-reset:s;}
+  .steps li{position:relative;padding:6px 0 6px 34px;font-size:15.5px;line-height:1.55;border-bottom:1px solid #f0ebe0;}
+  .steps li:last-child{border-bottom:none;}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:7px;width:22px;height:22px;
+    background:#f6ece6;color:var(--accent);border-radius:50%;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;}
+  .card .why{font-size:13px;color:var(--muted);margin:0 0 10px;}
+  table.tbl{border-collapse:collapse;width:100%;font-size:13.5px;margin:6px 0 4px;}
+  table.tbl th,table.tbl td{border:1px solid var(--border);padding:5px 9px;text-align:center;}
+  table.tbl th{background:#f6f1e7;font-weight:600;color:#2b2823;}
+  table.tbl td.l,table.tbl th.l{text-align:left;}
+  .mono{font-family:var(--mono);}
+  .yes{color:var(--teal);font-weight:600;} .no{color:var(--accent);font-weight:600;}
+  canvas.chart{width:100%;height:auto;display:block;margin:6px 0 2px;}
+  .note{font-size:13.5px;color:var(--muted);line-height:1.55;margin:8px 0 0;}
+  .seq{font-family:var(--mono);font-size:15px;letter-spacing:2px;background:#f6f1e7;border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:inline-block;margin:2px 0 8px;}
+  footer{margin-top:34px;color:var(--muted);font-size:13px;line-height:1.6;border-top:1px solid var(--border);padding-top:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>How the lower graphs are calculated</h1>
+  <p class="sub">From the watched column to the three curves, with the actual arithmetic.</p>
+  <a class="back" href="index.html">&larr; Back to the sandbox</a> &nbsp;&middot;&nbsp;
+  <a class="back" href="how-to-read-rules.html">How to read the rules</a>
+
+  <p style="margin-top:16px;">On the rules page, the observer's data was the teal center column, read top to bottom as a stream of 0s and 1s. The first two charts are built entirely from a stream like that. The third uses a coarse view of the whole row. Every number and curve below comes from one specific run, stated at the end; the exact values shift a little with run length and random seed, but the shapes are stable.</p>
+
+  <h2>Chart 1: predict it</h2>
+  <p>The observer sees one stream and tries to guess each next symbol from the ones just before it. The chart plots how wrong it is, in bits, as you give it more memory.</p>
+  <ol class="steps">
+    <li>Read the watched cell over time into a 0/1 stream, for example <span class="mono">1 0 0 1 1 1 1 1 0 0 1 0 0 0 0 1 ...</span></li>
+    <li>Choose a memory <code>k</code>. For every length-<code>k</code> run of past symbols (a "context"), tally how often a 0 versus a 1 came next.</li>
+    <li>Turn each tally into a probability with one tweak for humility: <code>p(next=1 | context) = (N&#8321; + 1) / (N&#8320; + N&#8321; + 2)</code>. The <code>+1</code> stops a context seen once from being trusted absolutely.</li>
+    <li>Train on the first half of the stream, then grade on the held-out second half. For each true next symbol the surprise is <code>-log&#8322;(p)</code> of the probability the model gave it; average those to get <b>error in bits per symbol</b>. <b>Accuracy</b> is just the percent where the more-likely guess was right.</li>
+  </ol>
+  <div class="eq">error = mean( &minus;log&#8322; p(actual next) ) &nbsp;&nbsp;|&nbsp;&nbsp; 1 bit = a coin flip (no grip) &nbsp;&middot;&nbsp; 0 bits = perfect</div>
+
+  <div class="card">
+    <div class="why">Worked example, the simplest case (memory <code>k = 1</code>, so the context is just the previous symbol).</div>
+    <p style="font-size:14.5px;margin:0 0 6px;">Train on this stream:</p>
+    <span class="seq">0 1 1 0 1 1 0 1 1</span>
+    <p style="font-size:14.5px;margin:8px 0 4px;">Tally what follows each previous symbol, then smooth:</p>
+    <table class="tbl">
+      <tr><th class="l">previous</th><th>&rarr; 0</th><th>&rarr; 1</th><th>p(next = 1)</th></tr>
+      <tr><td class="l mono">0</td><td>0</td><td>3</td><td class="mono">(3+1)/(3+2) = 0.80</td></tr>
+      <tr><td class="l mono">1</td><td>2</td><td>3</td><td class="mono">(3+1)/(5+2) = 0.571</td></tr>
+    </table>
+    <p style="font-size:14.5px;margin:12px 0 4px;">Now grade it on the next three symbols, <span class="mono">0 1 1</span> (the pattern continues):</p>
+    <table class="tbl">
+      <tr><th>previous</th><th>actual next</th><th>p(actual)</th><th>surprise &minus;log&#8322; p</th><th>guess</th><th>right?</th></tr>
+      <tr><td class="mono">1</td><td class="mono">0</td><td class="mono">0.429</td><td class="mono">1.222</td><td class="mono">1</td><td class="no">no</td></tr>
+      <tr><td class="mono">0</td><td class="mono">1</td><td class="mono">0.800</td><td class="mono">0.322</td><td class="mono">1</td><td class="yes">yes</td></tr>
+      <tr><td class="mono">1</td><td class="mono">1</td><td class="mono">0.571</td><td class="mono">0.807</td><td class="mono">1</td><td class="yes">yes</td></tr>
+    </table>
+    <p class="note">Average surprise = (1.222 + 0.322 + 0.807) / 3 = <b>0.784 bits/symbol</b>. Accuracy = 2 of 3 = <b>66.7%</b>. That single number, computed over a long stream instead of three symbols, is one point on the curve below. Sweep <code>k</code> and you trace the whole line.</p>
+  </div>
+
+  <div class="card">
+    <div class="why">The real curve, computed over a long run (one cell, 4000 steps). Error in bits per symbol versus memory <code>k</code>.</div>
+    <canvas id="ch1" class="chart"></canvas>
+    <p class="note">Order (Rule 250) is gripped instantly at ~0 bits. Chaos (Rule 30) sits at the 1-bit wall for every <code>k</code>: no amount of memory helps, because the only way to know the next symbol is to run the whole world, which is computational irreducibility. The complex rule (110) starts near a coin flip and falls to a low floor once memory is long enough. In this run that floor is about <b>0.20 bits</b> (96% accuracy); with more memory and a longer stream it creeps lower still (the sandbox's longer run reaches ~0.09). The shape, a drop to a floor well below the chaos wall, is the durable result.</p>
+  </div>
+
+  <h2>Chart 2: re-grain it</h2>
+  <p>Keep the world the same and change what the observer looks at. Instead of one cell it reads the <b>majority vote</b> of a window of width <code>w</code> around the center. That is a different 0/1 stream off the same history, so it has its own predictability. We run the entire Chart 1 pipeline on each width and keep the best-case floor.</p>
+  <div class="card">
+    <div class="why">The same world, two observers. Majority of three cells can disagree with the single center cell.</div>
+    <table class="tbl">
+      <tr><th>window (3 cells)</th><th>single-cell observer (center)</th><th>width-3 observer (majority)</th></tr>
+      <tr><td class="mono">1 1 0</td><td class="mono">1</td><td class="mono">1</td></tr>
+      <tr><td class="mono">0 1 0</td><td class="mono">1</td><td class="mono">0</td></tr>
+      <tr><td class="mono">1 0 1</td><td class="mono">0</td><td class="mono">1</td></tr>
+      <tr><td class="mono">0 0 1</td><td class="mono">0</td><td class="mono">0</td></tr>
+    </table>
+    <p class="note">Rows two and three disagree, so the two observers see different streams and reach different floors.</p>
+  </div>
+  <div class="card">
+    <div class="why">Best-case floor versus observation width, Rule 110, same long run.</div>
+    <canvas id="ch2" class="chart"></canvas>
+    <p class="note">The floor moves with the window, which is the whole point: what is knowable is not a property of the world alone, it depends on the instrument. Honest read of this run: the finest windows predict best and wide windows blur away structure, so the robust claim is observer-relativity, not that coarser is always better. A bee tuned to ultraviolet, an ear in a different frequency band, an attention span of four items instead of seven, each is a different window carving a different knowable world from the same reality.</p>
+  </div>
+
+  <h2>Chart 3: watch time appear</h2>
+  <p>A different observer again. Lump each row into blocks of <code>b</code> cells and describe the row by the histogram of its block patterns. The entropy of that histogram says how scrambled the blurry view looks:</p>
+  <div class="eq">H = &minus;(1/b) &middot; &sum;<sub>patterns v</sub> f(v) &middot; log&#8322; f(v) &nbsp;&nbsp; (bits per cell, 0 to 1)</div>
+  <p>where <code>f(v)</code> is how often block-pattern <code>v</code> appears in the row. Start the world ordered, run it forward, and plot <code>H</code> at each step.</p>
+  <div class="card">
+    <div class="why">Worked example, block size <code>b = 2</code>, one 16-cell row.</div>
+    <span class="seq">1 1 1 1 0 0 1 0 1 0 1 0 0 0 1 1</span>
+    <p style="font-size:14.5px;margin:8px 0 4px;">Cut into 8 blocks of two: <span class="mono">11&nbsp; 11&nbsp; 00&nbsp; 10&nbsp; 10&nbsp; 10&nbsp; 00&nbsp; 11</span>, then count:</p>
+    <table class="tbl">
+      <tr><th>pattern v</th><th>count</th><th>f(v)</th><th>f &middot; log&#8322; f</th></tr>
+      <tr><td class="mono">11</td><td>3</td><td class="mono">0.375</td><td class="mono">&minus;0.531</td></tr>
+      <tr><td class="mono">10</td><td>3</td><td class="mono">0.375</td><td class="mono">&minus;0.531</td></tr>
+      <tr><td class="mono">00</td><td>2</td><td class="mono">0.250</td><td class="mono">&minus;0.500</td></tr>
+      <tr><td class="mono">01</td><td>0</td><td class="mono">0</td><td class="mono">0</td></tr>
+    </table>
+    <p class="note">Sum = &minus;1.561. Then H = &minus;(1/2)(&minus;1.561) = <b>0.781 bits/cell</b> (out of a maximum of 1, which is all four patterns equally common). One row gives one value; running forward gives the curve below.</p>
+  </div>
+  <div class="card">
+    <div class="why">Block entropy over time from an ordered start (a solid block of 1s), <code>b = 4</code>, 160 steps.</div>
+    <canvas id="ch3" class="chart"></canvas>
+    <p class="note">From order, the blur's entropy climbs, fastest for chaos (30), moderately for the complex rule (110). Order (250) ripples as its solid block expands, then collapses back to near zero once it fills, so it never builds a lasting arrow. The microdynamics are completely deterministic; nothing random is added. The rising disorder lives in the observer's coarse description failing to keep up, and that manufactured climb is the arrow of time. Honest limit: elementary rules are not reversible, so part of the climb is genuine micro-information loss; the clean version uses a reversible rule, where every bit of the rise is provably the coarse-graining's doing.</p>
+  </div>
+
+  <h2>What is and is not standard</h2>
+  <p>None of the machinery is new, which is why it can be trusted: Shannon's entropy and surprise (1948), order-<code>k</code> models (n-grams), Laplace smoothing, and block entropy are all textbook. The quantities the curves approach, the entropy rate and the predictable information, are studied formally in computational mechanics. The only move here is the framing, reading these three standard measurements as one story about a bounded observer.</p>
+
+  <a class="back" href="index.html">&larr; Back to the sandbox</a>
+  <footer>Numbers from one run: prediction on a single cell over a 400-wide world for 4000 steps; re-grain on the same; block entropy from an ordered start over 160 steps with <code>b = 4</code>; pseudorandom seed 7. Exact values depend on the run; the shapes do not.</footer>
+</div>
+
+<script>
+const DATA={"errK":{"30":[1,1.001,1.002,1.002,1.003,1.013,1.02,1.042,1.083,1.096,1.082],"110":[1.033,1.043,1.101,0.997,0.624,0.308,0.241,0.221,0.206,0.203,0.207],"250":[0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001]},"Hseries":{"30":[0.237,0.04,0.04,0.096,0.121,0.111,0.116,0.144,0.19,0.165,0.19,0.218,0.24,0.239,0.239,0.27,0.323,0.267,0.282,0.319,0.377,0.353,0.372,0.4,0.442,0.421,0.406,0.439,0.489,0.469,0.483,0.526,0.498,0.505,0.505,0.539,0.583,0.552,0.591,0.599,0.623,0.621,0.597,0.634,0.628,0.645,0.682,0.658,0.671,0.649,0.675,0.66,0.713,0.733,0.696,0.732,0.747,0.737,0.728,0.739,0.751,0.758,0.746,0.734,0.776,0.725,0.711,0.758,0.769,0.746,0.805,0.82,0.769,0.784,0.784,0.818,0.805,0.837,0.827,0.814,0.819,0.801,0.785,0.82,0.854,0.806,0.859,0.812,0.829,0.837,0.802,0.859,0.847,0.838,0.892,0.871,0.901,0.88,0.886,0.865,0.883,0.897,0.892,0.899,0.906,0.865,0.868,0.895,0.912,0.913,0.93,0.94,0.933,0.91,0.881,0.926,0.928,0.911,0.942,0.96,0.939,0.948,0.918,0.946,0.942,0.945,0.964,0.959,0.954,0.965,0.957,0.953,0.974,0.96,0.975,0.954,0.963,0.965,0.942,0.955,0.98,0.983,0.978,0.978,0.984,0.976,0.962,0.966,0.969,0.982,0.972,0.976,0.97,0.971,0.96,0.977,0.965,0.972,0.976,0.975],"110":[0.237,0.04,0.04,0.076,0.076,0.081,0.081,0.111,0.116,0.101,0.111,0.151,0.156,0.151,0.144,0.173,0.19,0.175,0.151,0.215,0.215,0.213,0.218,0.231,0.249,0.22,0.246,0.279,0.287,0.287,0.241,0.289,0.304,0.296,0.259,0.299,0.345,0.321,0.311,0.341,0.353,0.314,0.352,0.383,0.346,0.403,0.355,0.398,0.4,0.412,0.374,0.407,0.445,0.468,0.44,0.467,0.479,0.463,0.457,0.499,0.441,0.48,0.477,0.526,0.532,0.517,0.493,0.52,0.536,0.574,0.544,0.585,0.587,0.554,0.565,0.58,0.565,0.577,0.54,0.57,0.58,0.549,0.532,0.553,0.57,0.619,0.603,0.645,0.636,0.601,0.621,0.64,0.615,0.692,0.638,0.675,0.721,0.676,0.645,0.668,0.658,0.681,0.705,0.692,0.717,0.675,0.693,0.707,0.665,0.663,0.686,0.728,0.722,0.734,0.725,0.72,0.715,0.732,0.745,0.73,0.751,0.731,0.733,0.745,0.72,0.757,0.759,0.777,0.759,0.766,0.75,0.751,0.755,0.774,0.759,0.76,0.791,0.758,0.765,0.783,0.759,0.775,0.788,0.81,0.781,0.795,0.778,0.801,0.802,0.812,0.809,0.789,0.788,0.781,0.79,0.776,0.789,0.818,0.807,0.844],"250":[0.237,0.237,0.207,0.245,0.245,0.245,0.214,0.252,0.252,0.252,0.22,0.258,0.258,0.258,0.226,0.264,0.264,0.264,0.231,0.269,0.269,0.269,0.236,0.273,0.273,0.273,0.24,0.276,0.276,0.276,0.243,0.279,0.279,0.279,0.245,0.282,0.282,0.282,0.247,0.284,0.284,0.284,0.249,0.285,0.285,0.285,0.25,0.285,0.285,0.285,0.25,0.285,0.285,0.285,0.25,0.285,0.285,0.285,0.249,0.284,0.284,0.284,0.247,0.282,0.282,0.282,0.245,0.279,0.279,0.279,0.243,0.276,0.276,0.276,0.24,0.273,0.273,0.273,0.236,0.269,0.269,0.269,0.231,0.264,0.264,0.264,0.226,0.258,0.258,0.258,0.22,0.252,0.252,0.252,0.214,0.245,0.245,0.245,0.207,0.237,0.237,0.237,0.199,0.229,0.229,0.229,0.19,0.219,0.219,0.219,0.18,0.209,0.209,0.209,0.17,0.198,0.198,0.198,0.159,0.185,0.185,0.185,0.146,0.172,0.172,0.172,0.132,0.157,0.157,0.157,0.117,0.14,0.14,0.14,0.101,0.122,0.122,0.122,0.082,0.101,0.101,0.101,0.061,0.076,0.076,0.076,0.035,0.04,0.04,0.04,0,0,0,0,0,0,0,0,0,0]},"widths":[1,3,5,7,9,13],"regrain":[0.203,0.182,0.226,0.278,0.283,0.238]};
+
+function chart(id,opts){
+  const cv=document.getElementById(id),W=cv.width=560,H=cv.height=240;
+  const x=cv.getContext('2d'),ml=56,mr=16,mt=opts.legend?42:16,mb=42;
+  const x0=ml,x1=W-mr,y0=H-mb,y1=mt,ymax=opts.ymax,ymin=0;
+  const px=f=>x0+(x1-x0)*f, py=v=>y0+(y1-y0)*((v-ymin)/(ymax-ymin));
+  x.clearRect(0,0,W,H);
+  x.font='11px -apple-system,BlinkMacSystemFont,sans-serif';
+  // gridlines + y ticks
+  opts.yTicks.forEach(v=>{const Y=py(v);x.strokeStyle='#ece6da';x.lineWidth=1;x.beginPath();x.moveTo(x0,Y);x.lineTo(x1,Y);x.stroke();
+    x.fillStyle='#6b665d';x.textAlign='right';x.textBaseline='middle';x.fillText(v.toFixed(2),x0-7,Y);});
+  // optional dashed reference line
+  if(opts.hline!=null){const Y=py(opts.hline);x.strokeStyle='#c9b8a8';x.setLineDash([4,3]);x.lineWidth=1;x.beginPath();x.moveTo(x0,Y);x.lineTo(x1,Y);x.stroke();x.setLineDash([]);}
+  // axes
+  x.strokeStyle='#cfc7b8';x.lineWidth=1;x.beginPath();x.moveTo(x0,y0);x.lineTo(x1,y0);x.moveTo(x0,y1);x.lineTo(x0,y0);x.stroke();
+  // x labels
+  x.fillStyle='#6b665d';x.textAlign='center';x.textBaseline='top';
+  opts.xLabels.forEach(L=>x.fillText(L.t,px(L.p),y0+7));
+  // axis titles
+  x.fillStyle='#2b2823';x.font='12px -apple-system,sans-serif';
+  x.fillText(opts.xlabel,(x0+x1)/2,H-15);
+  x.save();x.translate(15,(y0+y1)/2);x.rotate(-Math.PI/2);x.textAlign='center';x.textBaseline='middle';x.fillText(opts.ylabel,0,0);x.restore();
+  // series
+  opts.series.forEach(s=>{
+    const N=s.data.length;
+    x.strokeStyle=s.color;x.lineWidth=2.2;x.beginPath();
+    s.data.forEach((v,i)=>{const X=px(N===1?0.5:i/(N-1)),Y=py(v);i?x.lineTo(X,Y):x.moveTo(X,Y);});
+    x.stroke();
+    if(opts.dots)s.data.forEach((v,i)=>{const X=px(N===1?0.5:i/(N-1)),Y=py(v);x.fillStyle=s.color;x.beginPath();x.arc(X,Y,2.6,0,7);x.fill();});
+  });
+  // legend
+  if(opts.legend)opts.series.forEach((s,i)=>{const lx=x0+8+i*92,ly=14;x.fillStyle=s.color;x.fillRect(lx,ly+4,16,3);x.fillStyle='#2b2823';x.font='11px -apple-system,sans-serif';x.textAlign='left';x.textBaseline='top';x.fillText(s.label,lx+21,ly);});
+}
+
+chart('ch1',{ymax:1.15,yTicks:[0,0.25,0.5,0.75,1.0],hline:1.0,dots:true,legend:true,xlabel:'memory k (symbols of context)',ylabel:'error (bits/symbol)',
+  xLabels:[0,2,4,6,8,10].map(k=>({t:String(k),p:k/10})),
+  series:[{data:DATA.errK['250'],color:'#2a9d8f',label:'250'},{data:DATA.errK['110'],color:'#cf9a1e',label:'110'},{data:DATA.errK['30'],color:'#9c5b34',label:'30'}]});
+
+chart('ch2',{ymax:0.35,yTicks:[0,0.1,0.2,0.3],dots:true,legend:false,xlabel:'observation width (cells in the majority window)',ylabel:'best-case floor (bits/symbol)',
+  xLabels:DATA.widths.map((w,i)=>({t:String(w),p:i/(DATA.widths.length-1)})),
+  series:[{data:DATA.regrain,color:'#9c5b34',label:'110'}]});
+
+chart('ch3',{ymax:1.0,yTicks:[0,0.25,0.5,0.75,1.0],dots:false,legend:true,xlabel:'time step',ylabel:'block entropy H (bits/cell)',
+  xLabels:[0,40,80,120,160].map(t=>({t:String(t),p:Math.min(t,159)/159})),
+  series:[{data:DATA.Hseries['250'],color:'#2a9d8f',label:'250'},{data:DATA.Hseries['110'],color:'#cf9a1e',label:'110'},{data:DATA.Hseries['30'],color:'#9c5b34',label:'30'}]});
+</script>
+</body>
+</html>
