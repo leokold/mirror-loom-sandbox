@@ -74,6 +74,7 @@
   <div class="fig stcard">
     <h3>The rule, running from a single black cell</h3>
     <canvas id="stCanvas" class="st" width="361" height="180"></canvas>
+    <p style="margin:8px 0 0;font-size:12.5px;color:var(--muted);">The teal column marks one cell, the single site an observer watches over time in the experiments below.</p>
   </div>
   <p style="text-align:center;margin:2px 0 10px;"><a href="how-to-read-rules.html" style="color:var(--accent);font-size:14px;text-decoration:none;border-bottom:1px solid var(--border);">New to this? How to read these rules &rarr;</a></p>
 
@@ -100,18 +101,22 @@
     <div class="legend"><span><i class="dot" style="background:var(--teal)"></i>250</span><span><i class="dot" style="background:var(--gold)"></i>110</span><span><i class="dot" style="background:var(--brown)"></i>30</span><span><i class="dot" style="background:#111"></i>selected</span></div>
   </div>
 
-  <h2>Experiment 2: re-grain it</h2>
-  <p>Now keep the world fixed and change what the observer looks at. Instead of one cell it reads the majority vote of a strip of width <code>w</code>. We compute the same best-prediction floor for each width and plot it. The floor moves, which is the lesson: what is knowable is not a property of the world alone, it depends on the observer's instrument. A wider or narrower window is a different observer and gets a different answer. (Honest detail: for Rule 110 the single cell does best and blurring hurts; the point is only that the floor depends on the grain.) For a cognitive scientist this is the interesting one: a bee that sees ultraviolet, an ear tuned elsewhere, an attention span of four items instead of seven, each is a different keyhole carving a different knowable world from the same reality.</p>
+  <h2>Experiment 2: swap the observer</h2>
+  <p>Now hold the world completely fixed and change only the observer. The same rule keeps running and the cells do exactly what they did before. Three observers each try to predict one cell's next value, and the knob along the bottom is how many steps of that cell's own past they may use. The historian uses only that past. The neighbor observer ignores the past and looks sideways instead, at whether the cell's two immediate neighbors currently differ, their XOR; carrying no memory, its line stays flat. The third uses both, its own past and that one sideways glance.</p>
+  <p>Two things to keep straight. The memory knob moves only the historian and the memory half of the combined observer; it never widens the neighbor's view. And the neighbor's view is deliberately just the one-bit XOR of the two adjacent cells, not the full local patch. That restriction is the point: a cell's next value is computed from its three-cell neighborhood, so an observer allowed to see all three would predict any rule perfectly and there would be nothing to compare. Holding the neighbor to a lossy summary is what makes the contest meaningful.</p>
+  <p>Pick Rule 90 and the point lands hard. To the historian the cell is a coin flip, a full bit of surprise at every memory depth, apparently random. To the neighbor observer the very same stream is perfectly predictable, zero bits, because Rule 90's whole law is "a cell becomes the XOR of its neighbors." No amount of memory rescues the historian; the right instrument needs almost none. One calls it noise, the other calls it trivial, and both are right about the world they can see. The other rules fill in the lesson. Order (250) is free for everyone. The complex rule (110) rewards memory: the historian and the combined observer both descend as their context grows, while the memoryless neighbor view stalls. And chaos (30) is the wall: the historian never leaves the coin-flip line, and although the neighbor and combined observers do better they bottom out near a third of a bit and stay there. That residue is not coin noise. About half its steps are perfectly determined and the rest are educated guesses, right roughly three times in four; it is an irreducible remainder for this observer, the kind only full simulation from the true starting state could remove. For a cognitive scientist this is the load-bearing claim: a bee tuned to ultraviolet, an ear pitched elsewhere, a working memory of four chunks instead of seven, each is a different instrument carving a different knowable world from one shared reality.</p>
 
   <div class="card">
-    <h3>2. Re-grain it</h3>
-    <p class="why">Slide the observation window width and watch the floor move. Selected rule only.</p>
-    <div class="ctl"><label>window width</label>
-      <input type="range" id="wSlide" min="0" max="5" step="1" value="0" style="flex:1" />
-      <span class="val" id="wVal"></span></div>
+    <h3>2. Swap the observer</h3>
+    <p class="why">Same rule, same cells. Three observers race to predict one cell's next value; the x-axis is how much of the cell's own past they may use. The neighbor view uses no memory, so it is a flat reference. Pick a rule above.</p>
+    <div class="ctl"><label>y-axis</label>
+      <span style="display:flex;gap:6px;flex:1">
+        <button class="rb mtog2 active" data-metric="err">error (bits)</button>
+        <button class="rb mtog2" data-metric="acc">accuracy</button>
+      </span></div>
     <canvas id="c2" class="chart"></canvas>
     <div class="readout" id="r2"></div>
-    <div class="legend">higher floor = harder for that observer.</div>
+    <div class="legend"><span><i class="dot" style="background:#4a4640"></i>historian (own past)</span><span><i class="dot" style="background:#2a9d8f"></i>neighbor-XOR (no memory)</span><span><i class="dot" style="background:#cf9a1e"></i>both</span></div>
   </div>
 
   <h2>Experiment 3: watch time appear</h2>
@@ -162,20 +167,37 @@
 
 <script>
 const TEAL="#2a9d8f",GOLD="#cf9a1e",BROWN="#9c5b34",SEL="#16130f",ACC="#9c5b34";
+const OBSA="#4a4640",OBSB="#2a9d8f",OBSC="#cf9a1e";
 const KS=Array.from({length:15},(_,i)=>i);
-const WIDTHS=[1,3,5,7,9,13];
+const K2MAX=6;
 const BLOCKS=[2,4,8];
 const REFS=[250,110,30], REFCOL={250:TEAL,110:GOLD,30:BROWN};
+const RLABEL={250:"250 order",90:"90 fractal",110:"110 complex",30:"30 chaos"};
+let _seed=12345;
+function srand(){_seed=_seed+0x6D2B79F5|0;let t=Math.imul(_seed^_seed>>>15,1|_seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}
 const cache=new Map();
-let state={rule:110,k:6,wi:0,b:4,metric:'err'};
+let state={rule:110,k:6,b:4,metric:'err',metric2:'err'};
 
 function table(rule){const t=new Uint8Array(8);for(let i=0;i<8;i++)t[i]=(rule>>i)&1;return t;}
 function evolve(rule,W,S,ic){const t=table(rule);let row=Uint8Array.from(ic);const h=new Uint8Array(W*S);
  for(let s=0;s<S;s++){h.set(row,s*W);const nr=new Uint8Array(W);
   for(let i=0;i<W;i++){const l=row[(i-1+W)%W],c=row[i],r=row[(i+1)%W];nr[i]=t[(l<<2)|(c<<1)|r];}row=nr;}return h;}
 function centerCol(h,W,S){const o=new Uint8Array(S),c=W>>1;for(let s=0;s<S;s++)o[s]=h[s*W+c];return o;}
-function majSeries(h,W,S,r){const o=new Uint8Array(S),c=W>>1,wdt=2*r+1;
- for(let s=0;s<S;s++){let sum=0;for(let i=c-r;i<=c+r;i++)sum+=h[s*W+i];o[s]=(sum*2>wdt)?1:0;}return o;}
+function obsSeries(h,W,S){const c=W>>1,n=S,ntr=n>>1;
+ const A=new Uint8Array(n);for(let s=0;s<n;s++)A[s]=h[s*W+c];
+ const Xc=new Uint8Array(n);for(let t=1;t<n;t++)Xc[t]=h[(t-1)*W+(c-1)]^h[(t-1)*W+(c+1)];
+ function score(getCtx,size,start){const c0=new Float64Array(size),c1=new Float64Array(size);
+  for(let t=start;t<ntr;t++){const cx=getCtx(t);if(A[t])c1[cx]++;else c0[cx]++;}
+  let ll=0,m=0,corr=0;
+  for(let t=Math.max(start,ntr);t<n;t++){const cx=getCtx(t);const p1=(c1[cx]+1)/(c0[cx]+c1[cx]+2);const y=A[t];const p=y?p1:1-p1;ll+=-Math.log2(p);corr+=(((p1>=.5)?1:0)===y)?1:0;m++;}
+  return{bits:ll/m,acc:corr/m};}
+ const hist=[],both=[];
+ for(let k=0;k<=K2MAX;k++){
+  hist.push(Object.assign({k},score(t=>{let v=0;for(let j=1;j<=k;j++)v=(v<<1)|A[t-j];return v;},1<<k,k)));
+  both.push(Object.assign({k},score(t=>{let v=0;for(let j=1;j<=k;j++)v=(v<<1)|A[t-j];return (v<<1)|Xc[t];},1<<(k+1),Math.max(k,1))));
+ }
+ const nbr=score(t=>Xc[t],2,1);
+ return{hist,both,nbr,KMAX:K2MAX};}
 function bitsForK(seq,k){const n=seq.length,ntr=n>>1;
  if(k===0){let c1=0;for(let i=0;i<ntr;i++)c1+=seq[i];const p1=(c1+1)/(ntr+2);let ll=0,m=0,corr=0;
   for(let i=ntr;i<n;i++){const y=seq[i];const p=y?p1:1-p1;ll+=-Math.log2(p);m++;corr+=(((p1>=.5)?1:0)===y)?1:0;}return[ll/m,corr/m];}
@@ -190,20 +212,20 @@ function bitsForK(seq,k){const n=seq.length,ntr=n>>1;
 function blockEnt(h,off,W,b){const n=(W/b)|0;const cnt=new Float64Array(1<<b);
  for(let j=0;j<n;j++){let v=0;for(let i=0;i<b;i++)v=(v<<1)|h[off+j*b+i];cnt[v]++;}
  let H=0;for(let v=0;v<(1<<b);v++){if(cnt[v]>0){const p=cnt[v]/n;H+=-p*Math.log2(p);}}return H/b;}
-function randIC(W){const ic=new Uint8Array(W);for(let i=0;i<W;i++)ic[i]=Math.random()<.5?1:0;return ic;}
+function randIC(W){const ic=new Uint8Array(W);for(let i=0;i<W;i++)ic[i]=srand()<.5?1:0;return ic;}
 
 function compute(rule){
  if(cache.has(rule))return cache.get(rule);
+ _seed=(rule*2654435761+12345)>>>0;
  const sW=361,sS=180;const sic=new Uint8Array(sW);sic[sW>>1]=1;const seed=evolve(rule,sW,sS,sic);
  const W=241,S=5000;const hR=evolve(rule,W,S,randIC(W));
  const seq=centerCol(hR,W,S);
  const bitsK=KS.map(k=>{const[ll,ac]=bitsForK(seq,k);return{k,bits:ll,acc:ac};});
- const floorW=WIDTHS.map((w,idx)=>{const r=(w-1)/2;const ms=majSeries(hR,W,S,r);
-   let best=9;for(let k=0;k<=8;k++){const[ll]=bitsForK(ms,k);if(ll<best)best=ll;}return{w,floor:best};});
+ const obs2=obsSeries(hR,W,S);
  const oW=600,oS=360;const oic=new Uint8Array(oW);for(let i=(oW>>1)-15;i<(oW>>1)+15;i++)oic[i]=1;
  const hO=evolve(rule,oW,oS,oic);
  const ent={};BLOCKS.forEach(b=>{const arr=new Float64Array(oS);for(let s=0;s<oS;s++)arr[s]=blockEnt(hO,s*oW,oW,b);ent[b]=arr;});
- const obj={seed:{W:sW,S:sS,data:seed},bitsK,floorW,ent,oS};
+ const obj={seed:{W:sW,S:sS,data:seed},bitsK,obs2,ent,oS};
  cache.set(rule,obj);return obj;
 }
 
@@ -221,16 +243,20 @@ function drawChart(cv,opts){const{ctx,w,h}=setup(cv);ctx.clearRect(0,0,w,h);
  ctx.strokeStyle="#cfc9bd";ctx.beginPath();ctx.moveTo(X0,Y0);ctx.lineTo(X1,Y0);ctx.moveTo(X0,Y0);ctx.lineTo(X0,Y1);ctx.stroke();
  if(baseline!=null){const yb=sy(baseline);ctx.strokeStyle="#cbb9ac";ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(X0,yb);ctx.lineTo(X1,yb);ctx.stroke();ctx.setLineDash([]);}
  if(marker!=null){const x=sx(marker);ctx.strokeStyle="#cbb9ac";ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x,Y0);ctx.lineTo(x,Y1);ctx.stroke();ctx.setLineDash([]);}
- series.forEach(s=>{ctx.globalAlpha=s.alpha==null?1:s.alpha;ctx.strokeStyle=s.color;ctx.lineWidth=s.width||1.5;ctx.beginPath();
-   s.xs.forEach((xv,i)=>{const x=sx(xv),y=sy(s.ys[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
-   if(s.dots){ctx.fillStyle=s.color;s.xs.forEach((xv,i)=>{ctx.beginPath();ctx.arc(sx(xv),sy(s.ys[i]),s.width?2.4:2,0,7);ctx.fill();});}});
+ const cy=v=>Math.max(Y1,Math.min(Y0,sy(v)));
+ series.forEach(s=>{ctx.globalAlpha=s.alpha==null?1:s.alpha;ctx.strokeStyle=s.color;ctx.lineWidth=s.width||1.5;ctx.setLineDash(s.dash||[]);ctx.beginPath();
+   s.xs.forEach((xv,i)=>{const x=sx(xv),y=cy(s.ys[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();ctx.setLineDash([]);
+   if(s.dots){ctx.fillStyle=s.color;s.xs.forEach((xv,i)=>{ctx.beginPath();ctx.arc(sx(xv),cy(s.ys[i]),s.width?2.4:2,0,7);ctx.fill();});}});
  ctx.globalAlpha=1;ctx.fillStyle="#8a857b";ctx.textAlign="center";ctx.textBaseline="bottom";if(xlabel)ctx.fillText(xlabel,(X0+X1)/2,h-1);
  if(ylabel){ctx.save();ctx.translate(13,(Y0+Y1)/2);ctx.rotate(-Math.PI/2);ctx.fillStyle="#8a857b";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ylabel,0,0);ctx.restore();}
 }
 
 function drawSpacetime(){const o=compute(state.rule);const cv=document.getElementById("stCanvas");
- cv.width=o.seed.W;cv.height=o.seed.S;const ctx=cv.getContext("2d");const img=ctx.createImageData(o.seed.W,o.seed.S);
+ const W=o.seed.W,S=o.seed.S,c=W>>1;
+ cv.width=W;cv.height=S;const ctx=cv.getContext("2d");const img=ctx.createImageData(W,S);
  for(let i=0;i<o.seed.data.length;i++){const v=o.seed.data[i]?20:255;const p=i*4;img.data[p]=v;img.data[p+1]=v;img.data[p+2]=v;img.data[p+3]=255;}
+ for(let s=0;s<S;s++){const on=o.seed.data[s*W+c],p=(s*W+c)*4;
+  if(on){img.data[p]=23;img.data[p+1]=92;img.data[p+2]=83;}else{img.data[p]=150;img.data[p+1]=212;img.data[p+2]=204;}img.data[p+3]=255;}
  ctx.putImageData(img,0,0);}
 
 function render(){
@@ -243,19 +269,24 @@ function render(){
  drawChart(document.getElementById("c1"),useAcc?
    {xmin:0,xmax:14,ymin:0.45,ymax:1.02,xticks:[0,5,10,14],yticks:[0.5,0.75,1],baseline:0.5,
     series:[...refSeries,selS],marker:state.k,xlabel:"context window k",ylabel:"accuracy (0.5 = coin flip)"}:
-   {xmin:0,xmax:14,ymin:0,ymax:1.05,xticks:[0,5,10,14],yticks:[0,0.5,1],baseline:1,
+   {xmin:0,xmax:14,ymin:0,ymax:1.15,xticks:[0,5,10,14],yticks:[0,0.5,1],baseline:1,
     series:[...refSeries,selS],marker:state.k,xlabel:"context window k",ylabel:"prediction error (bits/sym)"});
  const d=o.bitsK[state.k];
  document.getElementById("kVal").textContent="k = "+state.k;
  document.getElementById("r1").innerHTML="At k = "+state.k+": <b>"+(d.acc*100).toFixed(1)+"%</b> accuracy, <b>"+d.bits.toFixed(3)+"</b> bits/symbol. Floor error (best k): <b>"+Math.min(...o.bitsK.map(x=>x.bits)).toFixed(3)+"</b>.";
  document.querySelectorAll(".mtog").forEach(btn=>btn.classList.toggle("active",btn.dataset.metric===state.metric));
 
- drawChart(document.getElementById("c2"),{xmin:1,xmax:13,ymin:0,ymax:Math.max(0.4,Math.max(...o.floorW.map(f=>f.floor))*1.15),
-   xticks:[1,5,9,13],yticks:[0,0.2,0.4],series:[{xs:o.floorW.map(f=>f.w),ys:o.floorW.map(f=>f.floor),color:ACC,width:2,dots:true}],
-   marker:WIDTHS[state.wi],xlabel:"observation window width",ylabel:"best-case floor (bits/sym)"});
- const fw=o.floorW[state.wi];
- document.getElementById("wVal").textContent="width = "+fw.w;
- document.getElementById("r2").innerHTML="Window width <b>"+fw.w+"</b>: predictive floor <b>"+fw.floor.toFixed(3)+"</b> bits/symbol.";
+ const useAcc2=state.metric2==='acc';const pick2=d=>useAcc2?d.acc:d.bits;
+ const ks=o.obs2.hist.map(d=>d.k);const nbrV=useAcc2?o.obs2.nbr.acc:o.obs2.nbr.bits;
+ const series2=[{xs:ks,ys:ks.map(()=>nbrV),color:OBSB,width:1.6,dash:[6,4]},
+   {xs:ks,ys:o.obs2.hist.map(pick2),color:OBSA,width:2,dots:true},
+   {xs:ks,ys:o.obs2.both.map(pick2),color:OBSC,width:2,dots:true}];
+ drawChart(document.getElementById("c2"),useAcc2?
+   {xmin:0,xmax:o.obs2.KMAX,ymin:0.45,ymax:1.02,xticks:[0,2,4,6],yticks:[0.5,0.75,1],baseline:0.5,series:series2,xlabel:"memory k (steps of the cell's own past)",ylabel:"accuracy (0.5 = coin flip)"}:
+   {xmin:0,xmax:o.obs2.KMAX,ymin:0,ymax:1.15,xticks:[0,2,4,6],yticks:[0,0.5,1],baseline:1,series:series2,xlabel:"memory k (steps of the cell's own past)",ylabel:"prediction error (bits/sym)"});
+ const hf=o.obs2.hist[o.obs2.hist.length-1],bf=o.obs2.both[o.obs2.both.length-1],nb=o.obs2.nbr;
+ document.getElementById("r2").innerHTML=(RLABEL[state.rule]||("rule "+state.rule))+", at full memory: historian <b>"+hf.bits.toFixed(2)+"</b>, neighbor-XOR <b>"+nb.bits.toFixed(2)+"</b>, both <b>"+bf.bits.toFixed(2)+"</b> bits ("+(bf.acc*100).toFixed(0)+"% right).";
+ document.querySelectorAll(".mtog2").forEach(btn=>btn.classList.toggle("active",btn.dataset.metric===state.metric2));
 
  const refEnt=REFS.map(r=>{const ro=compute(r);return{xs:Array.from(ro.ent[state.b].keys()),ys:Array.from(ro.ent[state.b]),color:REFCOL[r],width:1.2,alpha:.32};});
  const selEnt={xs:Array.from(o.ent[state.b].keys()),ys:Array.from(o.ent[state.b]),color:SEL,width:2};
@@ -276,7 +307,7 @@ function setRule(r){r=Math.max(0,Math.min(255,r|0));state.rule=r;
 document.querySelectorAll(".rb[data-rule]").forEach(b=>b.addEventListener("click",()=>setRule(+b.dataset.rule)));
 document.getElementById("ruleNum").addEventListener("change",e=>setRule(+e.target.value));
 document.getElementById("kSlide").addEventListener("input",e=>{state.k=+e.target.value;render();});
-document.getElementById("wSlide").addEventListener("input",e=>{state.wi=+e.target.value;render();});
+document.querySelectorAll(".mtog2").forEach(b=>b.addEventListener("click",()=>{state.metric2=b.dataset.metric;render();}));
 document.querySelectorAll(".bbtn").forEach(b=>b.addEventListener("click",()=>{state.b=+b.dataset.b;render();}));
 document.querySelectorAll(".mtog").forEach(b=>b.addEventListener("click",()=>{state.metric=b.dataset.metric;render();}));
 window.addEventListener("resize",()=>render());
