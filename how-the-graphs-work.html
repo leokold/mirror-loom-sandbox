@@ -48,7 +48,7 @@
   <a class="back" href="index.html">&larr; Back to the sandbox</a> &nbsp;&middot;&nbsp;
   <a class="back" href="how-to-read-rules.html">How to read the rules</a>
 
-  <p style="margin-top:16px;">On the rules page, the observer's data was the teal center column, read top to bottom as a stream of 0s and 1s. The first two charts are built entirely from a stream like that. The third uses a coarse view of the whole row. Every number and curve below comes from one specific run, stated at the end; the exact values shift a little with run length and random seed, but the shapes are stable.</p>
+  <p style="margin-top:16px;">On the rules page, the observer's data was the teal center column, read top to bottom as a stream of 0s and 1s. The first two charts are built from streams read off that history (the column, and its neighbors). The third uses a coarse view of the whole row. Every number and curve below comes from one specific run, stated at the end; the exact values shift a little with run length and random seed, but the shapes are stable.</p>
 
   <h2>Chart 1: predict it</h2>
   <p>The observer sees one stream and tries to guess each next symbol from the ones just before it. The chart plots how wrong it is, in bits, as you give it more memory.</p>
@@ -81,28 +81,44 @@
   </div>
 
   <div class="card">
-    <div class="why">The real curve, computed over a long run (one cell, 4000 steps). Error in bits per symbol versus memory <code>k</code>.</div>
-    <canvas id="ch1" class="chart"></canvas>
-    <p class="note">Order (Rule 250) is gripped instantly at ~0 bits. Chaos (Rule 30) sits at the 1-bit wall for every <code>k</code>: no amount of memory helps, because the only way to know the next symbol is to run the whole world, which is computational irreducibility. The complex rule (110) starts near a coin flip and falls to a low floor once memory is long enough. In this run that floor is about <b>0.20 bits</b> (96% accuracy); with more memory and a longer stream it creeps lower still (the sandbox's longer run reaches ~0.09). The shape, a drop to a floor well below the chaos wall, is the durable result.</p>
+    <div class="why">The same tally at <code>k = 3</code> on the real Rule 110 column (the sandbox run). Eight contexts, eight different coins; that spread is the predictive structure.</div>
+    <table class="tbl">
+      <tr><th class="l">last 3 bits</th><th>&rarr; 0</th><th>&rarr; 1</th><th>p(next = 1)</th><th>bet</th></tr>
+      <tr><td class="l mono">0 0 0</td><td>33</td><td>219</td><td class="mono">0.866</td><td class="mono">1 (87%)</td></tr>
+      <tr><td class="l mono">0 1 0</td><td>23</td><td>207</td><td class="mono">0.897</td><td class="mono">1 (90%)</td></tr>
+      <tr><td class="l mono">1 0 1</td><td>26</td><td>202</td><td class="mono">0.883</td><td class="mono">1 (88%)</td></tr>
+      <tr><td class="l mono">1 1 1</td><td>122</td><td>318</td><td class="mono">0.722</td><td class="mono">1 (72%)</td></tr>
+      <tr><td class="l mono">0 0 1</td><td>204</td><td>134</td><td class="mono">0.397</td><td class="mono">0 (60%)</td></tr>
+      <tr><td class="l mono">0 1 1</td><td>214</td><td>121</td><td class="mono">0.362</td><td class="mono">0 (64%)</td></tr>
+      <tr><td class="l mono">1 0 0</td><td>219</td><td>119</td><td class="mono">0.353</td><td class="mono">0 (65%)</td></tr>
+      <tr><td class="l mono">1 1 0</td><td>315</td><td>21</td><td class="mono">0.065</td><td class="mono">0 (93%)</td></tr>
+    </table>
+    <p class="note">A single global coin would use only the overall frequency of 1s, 0.54, and score <b>0.987 bits</b>, barely better than a flip. Conditioning on the last three bits, the coins range from 0.065 to 0.90 and the error falls to <b>0.801 bits</b> (67% accuracy). One position: context <span class="mono">0 1 0</span> bets 0.90 on a 1; if a 1 follows the cost is &minus;log&#8322;(0.90) = 0.15 bits, if a 0 follows &minus;log&#8322;(0.10) = 3.3 bits. Average over the held-out half for the <code>k</code> = 3 point; more memory sharpens the coins toward the floor.</p>
   </div>
 
-  <h2>Chart 2: re-grain it</h2>
-  <p>Keep the world the same and change what the observer looks at. Instead of one cell it reads the <b>majority vote</b> of a window of width <code>w</code> around the center. That is a different 0/1 stream off the same history, so it has its own predictability. We run the entire Chart 1 pipeline on each width and keep the best-case floor.</p>
   <div class="card">
-    <div class="why">The same world, two observers. Majority of three cells can disagree with the single center cell.</div>
+    <div class="why">The real curve, computed over the sandbox run (one cell, 5000 steps). Error in bits per symbol versus memory <code>k</code>.</div>
+    <canvas id="ch1" class="chart"></canvas>
+    <p class="note">Order (Rule 250) is gripped instantly at ~0 bits. Chaos (Rule 30) sits at the 1-bit wall for every <code>k</code>, drifting just above 1 at high memory as the estimator overfits noise it cannot generalize: no amount of memory helps, because the only way to know the next symbol is to run the whole world, which is computational irreducibility. The complex rule (110) starts at a coin flip (0.99 bits) and, once memory reaches about five symbols, falls to a floor near <b>0.13 bits</b> (about 96% accuracy) by <code>k</code> = 10. The shape, a drop to a floor well below the chaos wall, is the durable result.</p>
+  </div>
+
+  <h2>Chart 2: swap the observer</h2>
+  <p>Keep the world the same and change the observer. Three predictors race to guess one cell's next value. The <b>historian</b> uses only that cell's own past, as in Chart 1. The <b>neighbor</b> ignores the past and looks sideways, at whether the two adjacent cells currently differ (their XOR). The <b>both</b> observer uses its own past and that neighbor glance. The axis along the bottom is memory <code>k</code>, which moves only the historian and the memory half of "both"; the neighbor carries no memory, so its line is flat. The neighbor is deliberately held to the one-bit XOR, not the full neighborhood, because a cell's next value is computed from all three of its neighbors, so an observer shown all three would predict any rule perfectly and there would be nothing to compare.</p>
+  <div class="card">
+    <div class="why">Why the neighbor can win. For Rule 90 the next cell is exactly <code>left XOR right</code>.</div>
     <table class="tbl">
-      <tr><th>window (3 cells)</th><th>single-cell observer (center)</th><th>width-3 observer (majority)</th></tr>
-      <tr><td class="mono">1 1 0</td><td class="mono">1</td><td class="mono">1</td></tr>
-      <tr><td class="mono">0 1 0</td><td class="mono">1</td><td class="mono">0</td></tr>
-      <tr><td class="mono">1 0 1</td><td class="mono">0</td><td class="mono">1</td></tr>
-      <tr><td class="mono">0 0 1</td><td class="mono">0</td><td class="mono">0</td></tr>
+      <tr><th>left</th><th>right</th><th>left XOR right</th><th>Rule 90 next</th></tr>
+      <tr><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td></tr>
+      <tr><td class="mono">0</td><td class="mono">1</td><td class="mono">1</td><td class="mono">1</td></tr>
+      <tr><td class="mono">1</td><td class="mono">0</td><td class="mono">1</td><td class="mono">1</td></tr>
+      <tr><td class="mono">1</td><td class="mono">1</td><td class="mono">0</td><td class="mono">0</td></tr>
     </table>
-    <p class="note">Rows two and three disagree, so the two observers see different streams and reach different floors.</p>
+    <p class="note">A neighbor observer watching the two adjacent cells predicts Rule 90 perfectly (0 bits), while the column's own past looks like a coin flip (~1 bit). Same world, two observers, opposite verdicts: predictability lives in the fit between world and instrument, not in the world alone.</p>
   </div>
   <div class="card">
-    <div class="why">Best-case floor versus observation width, Rule 110, same long run.</div>
+    <div class="why">The three observers versus memory, Rule 110 (sandbox run). Error in bits per symbol; dashed line is a coin flip.</div>
     <canvas id="ch2" class="chart"></canvas>
-    <p class="note">The floor moves with the window, which is the whole point: what is knowable is not a property of the world alone, it depends on the instrument. Honest read of this run: the finest windows predict best and wide windows blur away structure, so the robust claim is observer-relativity, not that coarser is always better. A bee tuned to ultraviolet, an ear in a different frequency band, an attention span of four items instead of seven, each is a different window carving a different knowable world from the same reality.</p>
+    <p class="note">The historian and "both" fall as memory grows; the memoryless neighbor stays flat. The lesson generalizes: a bee tuned to ultraviolet, an ear in another frequency band, an attention span of four items instead of seven, each is a different instrument carving a different knowable world from the same reality. And some worlds resist every instrument here: for chaotic Rule 30 even "both" bottoms out near a third of a bit, an irreducible remainder that only full simulation removes.</p>
   </div>
 
   <h2>Chart 3: watch time appear</h2>
@@ -125,18 +141,18 @@
   <div class="card">
     <div class="why">Block entropy over time from an ordered start (a solid block of 1s), <code>b = 4</code>, 160 steps.</div>
     <canvas id="ch3" class="chart"></canvas>
-    <p class="note">From order, the blur's entropy climbs, fastest for chaos (30), moderately for the complex rule (110). Order (250) ripples as its solid block expands, then collapses back to near zero once it fills, so it never builds a lasting arrow. The microdynamics are completely deterministic; nothing random is added. The rising disorder lives in the observer's coarse description failing to keep up, and that manufactured climb is the arrow of time. Honest limit: elementary rules are not reversible, so part of the climb is genuine micro-information loss; the clean version uses a reversible rule, where every bit of the rise is provably the coarse-graining's doing.</p>
+    <p class="note">From order, the blur's entropy climbs, fastest for chaos (30), moderately for the complex rule (110). Order (250) ripples as its solid block expands, then collapses back to near zero once it fills, so it never builds a lasting arrow. The microdynamics are completely deterministic; nothing random is added. The rising disorder lives in the observer's coarse description failing to keep up, and that manufactured climb is the arrow of time. Honest limit: elementary rules are not reversible, so part of the climb is genuine micro-information loss; the sandbox's Experiment 4 shows the clean version, a reversible rule whose only source of rising disorder is the coarse-graining, and where running time backward produces the very same climb, so the observer cannot tell which way time flows.</p>
   </div>
 
   <h2>What is and is not standard</h2>
   <p>None of the machinery is new, which is why it can be trusted: Shannon's entropy and surprise (1948), order-<code>k</code> models (n-grams), Laplace smoothing, and block entropy are all textbook. The quantities the curves approach, the entropy rate and the predictable information, are studied formally in computational mechanics. The only move here is the framing, reading these three standard measurements as one story about a bounded observer.</p>
 
   <a class="back" href="index.html">&larr; Back to the sandbox</a>
-  <footer>Numbers from one run: prediction on a single cell over a 400-wide world for 4000 steps; re-grain on the same; block entropy from an ordered start over 160 steps with <code>b = 4</code>; pseudorandom seed 7. Exact values depend on the run; the shapes do not.</footer>
+  <footer>Numbers: Chart 1 is the live sandbox run, one cell over a 401-wide world for 5000 steps with a fixed per-rule seed. Charts 2 and 3 come from a 400-wide run over 160 to 4000 steps, seed 7. Exact values depend on the run; the shapes do not.</footer>
 </div>
 
 <script>
-const DATA={"errK":{"30":[1,1.001,1.002,1.002,1.003,1.013,1.02,1.042,1.083,1.096,1.082],"110":[1.033,1.043,1.101,0.997,0.624,0.308,0.241,0.221,0.206,0.203,0.207],"250":[0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001]},"Hseries":{"30":[0.237,0.04,0.04,0.096,0.121,0.111,0.116,0.144,0.19,0.165,0.19,0.218,0.24,0.239,0.239,0.27,0.323,0.267,0.282,0.319,0.377,0.353,0.372,0.4,0.442,0.421,0.406,0.439,0.489,0.469,0.483,0.526,0.498,0.505,0.505,0.539,0.583,0.552,0.591,0.599,0.623,0.621,0.597,0.634,0.628,0.645,0.682,0.658,0.671,0.649,0.675,0.66,0.713,0.733,0.696,0.732,0.747,0.737,0.728,0.739,0.751,0.758,0.746,0.734,0.776,0.725,0.711,0.758,0.769,0.746,0.805,0.82,0.769,0.784,0.784,0.818,0.805,0.837,0.827,0.814,0.819,0.801,0.785,0.82,0.854,0.806,0.859,0.812,0.829,0.837,0.802,0.859,0.847,0.838,0.892,0.871,0.901,0.88,0.886,0.865,0.883,0.897,0.892,0.899,0.906,0.865,0.868,0.895,0.912,0.913,0.93,0.94,0.933,0.91,0.881,0.926,0.928,0.911,0.942,0.96,0.939,0.948,0.918,0.946,0.942,0.945,0.964,0.959,0.954,0.965,0.957,0.953,0.974,0.96,0.975,0.954,0.963,0.965,0.942,0.955,0.98,0.983,0.978,0.978,0.984,0.976,0.962,0.966,0.969,0.982,0.972,0.976,0.97,0.971,0.96,0.977,0.965,0.972,0.976,0.975],"110":[0.237,0.04,0.04,0.076,0.076,0.081,0.081,0.111,0.116,0.101,0.111,0.151,0.156,0.151,0.144,0.173,0.19,0.175,0.151,0.215,0.215,0.213,0.218,0.231,0.249,0.22,0.246,0.279,0.287,0.287,0.241,0.289,0.304,0.296,0.259,0.299,0.345,0.321,0.311,0.341,0.353,0.314,0.352,0.383,0.346,0.403,0.355,0.398,0.4,0.412,0.374,0.407,0.445,0.468,0.44,0.467,0.479,0.463,0.457,0.499,0.441,0.48,0.477,0.526,0.532,0.517,0.493,0.52,0.536,0.574,0.544,0.585,0.587,0.554,0.565,0.58,0.565,0.577,0.54,0.57,0.58,0.549,0.532,0.553,0.57,0.619,0.603,0.645,0.636,0.601,0.621,0.64,0.615,0.692,0.638,0.675,0.721,0.676,0.645,0.668,0.658,0.681,0.705,0.692,0.717,0.675,0.693,0.707,0.665,0.663,0.686,0.728,0.722,0.734,0.725,0.72,0.715,0.732,0.745,0.73,0.751,0.731,0.733,0.745,0.72,0.757,0.759,0.777,0.759,0.766,0.75,0.751,0.755,0.774,0.759,0.76,0.791,0.758,0.765,0.783,0.759,0.775,0.788,0.81,0.781,0.795,0.778,0.801,0.802,0.812,0.809,0.789,0.788,0.781,0.79,0.776,0.789,0.818,0.807,0.844],"250":[0.237,0.237,0.207,0.245,0.245,0.245,0.214,0.252,0.252,0.252,0.22,0.258,0.258,0.258,0.226,0.264,0.264,0.264,0.231,0.269,0.269,0.269,0.236,0.273,0.273,0.273,0.24,0.276,0.276,0.276,0.243,0.279,0.279,0.279,0.245,0.282,0.282,0.282,0.247,0.284,0.284,0.284,0.249,0.285,0.285,0.285,0.25,0.285,0.285,0.285,0.25,0.285,0.285,0.285,0.25,0.285,0.285,0.285,0.249,0.284,0.284,0.284,0.247,0.282,0.282,0.282,0.245,0.279,0.279,0.279,0.243,0.276,0.276,0.276,0.24,0.273,0.273,0.273,0.236,0.269,0.269,0.269,0.231,0.264,0.264,0.264,0.226,0.258,0.258,0.258,0.22,0.252,0.252,0.252,0.214,0.245,0.245,0.245,0.207,0.237,0.237,0.237,0.199,0.229,0.229,0.229,0.19,0.219,0.219,0.219,0.18,0.209,0.209,0.209,0.17,0.198,0.198,0.198,0.159,0.185,0.185,0.185,0.146,0.172,0.172,0.172,0.132,0.157,0.157,0.157,0.117,0.14,0.14,0.14,0.101,0.122,0.122,0.122,0.082,0.101,0.101,0.101,0.061,0.076,0.076,0.076,0.035,0.04,0.04,0.04,0,0,0,0,0,0,0,0,0,0]},"widths":[1,3,5,7,9,13],"regrain":[0.203,0.182,0.226,0.278,0.283,0.238]};
+const DATA={"errK":{"30":[1,1.001,1.001,1.002,1.003,1.004,1.012,1.032,1.057,1.079,1.069],"110":[0.987,0.973,0.948,0.801,0.495,0.237,0.173,0.15,0.137,0.129,0.128],"250":[0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001]},"Hseries":{"30":[0.237,0.04,0.04,0.096,0.121,0.111,0.116,0.144,0.19,0.165,0.19,0.218,0.24,0.239,0.239,0.27,0.323,0.267,0.282,0.319,0.377,0.353,0.372,0.4,0.442,0.421,0.406,0.439,0.489,0.469,0.483,0.526,0.498,0.505,0.505,0.539,0.583,0.552,0.591,0.599,0.623,0.621,0.597,0.634,0.628,0.645,0.682,0.658,0.671,0.649,0.675,0.66,0.713,0.733,0.696,0.732,0.747,0.737,0.728,0.739,0.751,0.758,0.746,0.734,0.776,0.725,0.711,0.758,0.769,0.746,0.805,0.82,0.769,0.784,0.784,0.818,0.805,0.837,0.827,0.814,0.819,0.801,0.785,0.82,0.854,0.806,0.859,0.812,0.829,0.837,0.802,0.859,0.847,0.838,0.892,0.871,0.901,0.88,0.886,0.865,0.883,0.897,0.892,0.899,0.906,0.865,0.868,0.895,0.912,0.913,0.93,0.94,0.933,0.91,0.881,0.926,0.928,0.911,0.942,0.96,0.939,0.948,0.918,0.946,0.942,0.945,0.964,0.959,0.954,0.965,0.957,0.953,0.974,0.96,0.975,0.954,0.963,0.965,0.942,0.955,0.98,0.983,0.978,0.978,0.984,0.976,0.962,0.966,0.969,0.982,0.972,0.976,0.97,0.971,0.96,0.977,0.965,0.972,0.976,0.975],"110":[0.237,0.04,0.04,0.076,0.076,0.081,0.081,0.111,0.116,0.101,0.111,0.151,0.156,0.151,0.144,0.173,0.19,0.175,0.151,0.215,0.215,0.213,0.218,0.231,0.249,0.22,0.246,0.279,0.287,0.287,0.241,0.289,0.304,0.296,0.259,0.299,0.345,0.321,0.311,0.341,0.353,0.314,0.352,0.383,0.346,0.403,0.355,0.398,0.4,0.412,0.374,0.407,0.445,0.468,0.44,0.467,0.479,0.463,0.457,0.499,0.441,0.48,0.477,0.526,0.532,0.517,0.493,0.52,0.536,0.574,0.544,0.585,0.587,0.554,0.565,0.58,0.565,0.577,0.54,0.57,0.58,0.549,0.532,0.553,0.57,0.619,0.603,0.645,0.636,0.601,0.621,0.64,0.615,0.692,0.638,0.675,0.721,0.676,0.645,0.668,0.658,0.681,0.705,0.692,0.717,0.675,0.693,0.707,0.665,0.663,0.686,0.728,0.722,0.734,0.725,0.72,0.715,0.732,0.745,0.73,0.751,0.731,0.733,0.745,0.72,0.757,0.759,0.777,0.759,0.766,0.75,0.751,0.755,0.774,0.759,0.76,0.791,0.758,0.765,0.783,0.759,0.775,0.788,0.81,0.781,0.795,0.778,0.801,0.802,0.812,0.809,0.789,0.788,0.781,0.79,0.776,0.789,0.818,0.807,0.844],"250":[0.237,0.237,0.207,0.245,0.245,0.245,0.214,0.252,0.252,0.252,0.22,0.258,0.258,0.258,0.226,0.264,0.264,0.264,0.231,0.269,0.269,0.269,0.236,0.273,0.273,0.273,0.24,0.276,0.276,0.276,0.243,0.279,0.279,0.279,0.245,0.282,0.282,0.282,0.247,0.284,0.284,0.284,0.249,0.285,0.285,0.285,0.25,0.285,0.285,0.285,0.25,0.285,0.285,0.285,0.25,0.285,0.285,0.285,0.249,0.284,0.284,0.284,0.247,0.282,0.282,0.282,0.245,0.279,0.279,0.279,0.243,0.276,0.276,0.276,0.24,0.273,0.273,0.273,0.236,0.269,0.269,0.269,0.231,0.264,0.264,0.264,0.226,0.258,0.258,0.258,0.22,0.252,0.252,0.252,0.214,0.245,0.245,0.245,0.207,0.237,0.237,0.237,0.199,0.229,0.229,0.229,0.19,0.219,0.219,0.219,0.18,0.209,0.209,0.209,0.17,0.198,0.198,0.198,0.159,0.185,0.185,0.185,0.146,0.172,0.172,0.172,0.132,0.157,0.157,0.157,0.117,0.14,0.14,0.14,0.101,0.122,0.122,0.122,0.082,0.101,0.101,0.101,0.061,0.076,0.076,0.076,0.035,0.04,0.04,0.04,0,0,0,0,0,0,0,0,0,0]}};
 
 function chart(id,opts){
   const cv=document.getElementById(id),W=cv.width=560,H=cv.height=240;
@@ -175,9 +191,9 @@ chart('ch1',{ymax:1.15,yTicks:[0,0.25,0.5,0.75,1.0],hline:1.0,dots:true,legend:t
   xLabels:[0,2,4,6,8,10].map(k=>({t:String(k),p:k/10})),
   series:[{data:DATA.errK['250'],color:'#2a9d8f',label:'250'},{data:DATA.errK['110'],color:'#cf9a1e',label:'110'},{data:DATA.errK['30'],color:'#9c5b34',label:'30'}]});
 
-chart('ch2',{ymax:0.35,yTicks:[0,0.1,0.2,0.3],dots:true,legend:false,xlabel:'observation width (cells in the majority window)',ylabel:'best-case floor (bits/symbol)',
-  xLabels:DATA.widths.map((w,i)=>({t:String(w),p:i/(DATA.widths.length-1)})),
-  series:[{data:DATA.regrain,color:'#9c5b34',label:'110'}]});
+chart('ch2',{ymax:1.2,yTicks:[0,0.5,1.0],hline:1.0,dots:true,legend:true,xlabel:'memory k (steps of own past)',ylabel:'error (bits/symbol)',
+  xLabels:[0,2,4,6].map(k=>({t:String(k),p:k/6})),
+  series:[{data:[0.85,0.85,0.85,0.85,0.85,0.85,0.85],color:'#2a9d8f',label:'neighbor'},{data:[0.99,0.97,0.95,0.80,0.50,0.24,0.17],color:'#4a4640',label:'historian'},{data:[0.85,0.68,0.56,0.40,0.26,0.11,0.08],color:'#cf9a1e',label:'both'}]});
 
 chart('ch3',{ymax:1.0,yTicks:[0,0.25,0.5,0.75,1.0],dots:false,legend:true,xlabel:'time step',ylabel:'block entropy H (bits/cell)',
   xLabels:[0,40,80,120,160].map(t=>({t:String(t),p:Math.min(t,159)/159})),

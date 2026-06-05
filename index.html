@@ -72,9 +72,9 @@
     <span id="status" style="font-size:12.5px;color:var(--muted);"></span>
   </div>
   <div class="fig stcard">
-    <h3>The rule, running from a single black cell</h3>
+    <h3>The rule, running from a random start</h3>
     <canvas id="stCanvas" class="st" width="361" height="180"></canvas>
-    <p style="margin:8px 0 0;font-size:12.5px;color:var(--muted);">The teal column marks one cell, the single site an observer watches over time in the experiments below.</p>
+    <p style="margin:8px 0 0;font-size:12.5px;color:var(--muted);">The teal column is the one cell the experiments below watch, read top to bottom as a stream of 0s and 1s. This is the same random-start run those experiments learn from, so the column flips, it is not a constant line. Order rules like 250 are the exception: from a random start they flood to solid in a step or two and the column locks to one value, which is exactly what perfect predictability (0 bits) looks like. (The clean single-seed triangles in <a href="how-to-read-rules.html" style="color:var(--accent);">how to read these rules</a> are just for showing each rule's shape.)</p>
   </div>
   <p style="text-align:center;margin:2px 0 10px;"><a href="how-to-read-rules.html" style="color:var(--accent);font-size:14px;text-decoration:none;border-bottom:1px solid var(--border);">New to this? How to read these rules &rarr;</a></p>
 
@@ -83,7 +83,7 @@
   <p style="text-align:center;margin:2px 0 12px;"><a href="how-the-graphs-work.html" style="color:var(--accent);font-size:14px;text-decoration:none;border-bottom:1px solid var(--border);">Want the math? How the lower graphs are calculated &rarr;</a></p>
 
   <h2>Experiment 1: predict it</h2>
-  <p>The observer watches one cell over time and predicts the next value from the previous <code>k</code> values, where <code>k</code> is how much memory we allow. It learns on the first half of the data by tallying, for each pattern of <code>k</code> past symbols, how often a 0 or a 1 came next; turns the tally into a probability <code>p = (count + 1) / (total + 2)</code> (the +1 is a humility rule so a pattern seen once is not over-trusted); and is graded on fresh held-out data by the surprise <code>-log2(p)</code> of the true next symbol, averaged into bits per symbol. Order is trivially predicted (0 bits), chaos sits at a 1-bit wall no matter how much memory you give it, and the complex rule drops toward 0 once memory is large enough, then flattens. That flat level is the floor, the best this observer can do. For chaos the floor is a wall: the only way to know the next symbol is to run the whole world, with no shortcut, which is what Wolfram called computational irreducibility. Toggle the y-axis to accuracy to read the same story as percent correct.</p>
+  <p>In plain terms: watch one cell, the highlighted column, and guess its next value from only that cell's own recent past, never from the rule itself. The guess is learned by tallying what usually came next. In detail: the observer uses the previous <code>k</code> values, where <code>k</code> is how much memory we allow. It learns on the first half of the run by counting, for each pattern of <code>k</code> past symbols, how often a 0 or a 1 came next; turns each tally into a probability <code>p = (count + 1) / (total + 2)</code> (the +1 is a humility rule so a pattern seen once is not over-trusted); and is graded on fresh held-out data by the surprise <code>-log2(p)</code> of the true next symbol, averaged into bits per symbol. Order is trivially predicted (0 bits), chaos sits at a 1-bit wall no matter how much memory you give it, and the complex rule drops toward 0 once memory is large enough, then flattens. That flat level is the floor, the best this observer can do. For chaos the floor is a wall: the only way to know the next symbol is to run the whole world, with no shortcut, which is what Wolfram called computational irreducibility. Toggle the y-axis to accuracy to read the same story as percent correct.</p>
 
   <div class="card">
     <h3>1. Predict it</h3>
@@ -137,14 +137,25 @@
     <div class="legend"><span><i class="dot" style="background:var(--teal)"></i>250</span><span><i class="dot" style="background:var(--gold)"></i>110</span><span><i class="dot" style="background:var(--brown)"></i>30</span><span><i class="dot" style="background:#111"></i>selected</span></div>
   </div>
 
+  <h2>Experiment 4: the arrow runs both ways</h2>
+  <p>Experiment 3 had a flaw worth fixing: those rules quietly lose a little information at the micro level, so part of the rising disorder was real, not only the observer's blur. Here we close that gap with a reversible world. The same rule is run in a form that destroys nothing, the next state is the rule applied to the present, flipped by the previous state, a recipe you can run backward exactly as well as forward. We start it at a single ordered moment and let it evolve both ways in time at once. The coarse entropy, the blurriness the observer sees, climbs as you move away from that moment, and it climbs the same whether you go forward or backward. The microscopic law has no preferred direction and loses no information; the arrow of time is entirely the observer's, manufactured from a low-entropy starting point seen through a coarse lens. Handed only the blurry view, an observer could not tell you which way the clock is running.</p>
+
+  <div class="card">
+    <h3>4. The arrow runs both ways</h3>
+    <p class="why">A reversible version of the selected rule, started at one ordered moment (center) and evolved in both directions of time. Coarse entropy (block size 4) rises symmetrically; forward and backward look the same.</p>
+    <canvas id="c4" class="chart"></canvas>
+    <div class="readout" id="r4"></div>
+    <div class="legend">left of center is backward in time, right is forward. Both rise away from the ordered moment.</div>
+  </div>
+
   <h2>What it adds up to</h2>
-  <p>One bounded observer, three faces of a single limit. Prediction runs into an irreducible floor, so some of the world cannot be compressed. Where that floor sits depends on the observer's grain, so what is knowable lives in the fit between world and observer, not in either alone. And running the observer forward, the arrow of time falls out of its coarse-graining. The bridge to cognitive science is direct: perception and thought are compression, the brain is a bounded observer making useful, lossy models of a world it can never fully hold, and what you can know, even your felt sense of time passing, is shaped by your limits as much as by what is out there.</p>
+  <p>One bounded observer, three faces of a single limit. Prediction runs into an irreducible floor, so some of the world cannot be compressed. Where that floor sits depends on the observer's grain, so what is knowable lives in the fit between world and observer, not in either alone. And running the observer forward, the arrow of time falls out of its coarse-graining, so completely that even a reversible world with no arrow of its own grows one for the observer. The bridge to cognitive science is direct: perception and thought are compression, the brain is a bounded observer making useful, lossy models of a world it can never fully hold, and what you can know, even your felt sense of time passing, is shaped by your limits as much as by what is out there.</p>
 
   <h2>Is any of this new math?</h2>
   <p>No, and that matters for trusting it. The tools are standard: Shannon's information theory (1948), simple memory-<code>k</code> prediction (n-gram models), Laplace smoothing, and block entropy. The deeper quantities the curves approach, the entropy rate and the predictable information, are studied formally in a field called computational mechanics. The only original move here is the framing, treating these three textbook measurements as one story about an observer. To go further you would reconstruct the system's smallest predictive model, an epsilon-machine, and use bias-corrected entropy estimates, which would sharpen the numbers without changing the shapes.</p>
 
   <h2>Honest limits</h2>
-  <p>It is a toy: a cellular automaton is not the universe, so this shows a mechanism cleanly, it does not prove a worldview. The estimators are simple and slightly biased on small data, which is the little wiggle on the chaotic rule at high memory. These rules also lose some information at the micro level, so part of the rising disorder in experiment 3 is genuine, not purely the observer's blur; the cleanest version uses a reversible rule where the only source of rising disorder is the coarse-graining. And it is a classical, local model on purpose. There is a different kind of unpredictability in quantum physics, captured by Bell's theorem, that no model like this can reproduce. The wall this sandbox measures is the no-shortcut wall, not the quantum one. One honest caveat: that separation assumes measurement independence, meaning the experimenter's choices are not secretly correlated with the system. Superdeterministic readings of quantum mechanics deny exactly that, and on them the two walls stop being cleanly separate. No experiment can close that loophole, so the separation is the standard view rather than a settled fact.</p>
+  <p>It is a toy: a cellular automaton is not the universe, so this shows a mechanism cleanly, it does not prove a worldview. The estimators are simple and slightly biased on small data, which is the little wiggle on the chaotic rule at high memory. These rules also lose some information at the micro level, so part of the rising disorder in experiment 3 is genuine, not purely the observer's blur; experiment 4 closes that gap with a reversible rule whose only source of rising disorder is the coarse-graining. And it is a classical, local model on purpose. There is a different kind of unpredictability in quantum physics, captured by Bell's theorem, that no model like this can reproduce. The wall this sandbox measures is the no-shortcut wall, not the quantum one. One honest caveat: that separation assumes measurement independence, meaning the experimenter's choices are not secretly correlated with the system. Superdeterministic readings of quantum mechanics deny exactly that, and on them the two walls stop being cleanly separate. No experiment can close that loophole, so the separation is the standard view rather than a settled fact.</p>
 
   <h2>Mini-glossary</h2>
   <div class="glossary">
@@ -213,19 +224,30 @@ function blockEnt(h,off,W,b){const n=(W/b)|0;const cnt=new Float64Array(1<<b);
  for(let j=0;j<n;j++){let v=0;for(let i=0;i<b;i++)v=(v<<1)|h[off+j*b+i];cnt[v]++;}
  let H=0;for(let v=0;v<(1<<b);v++){if(cnt[v]>0){const p=cnt[v]/n;H+=-p*Math.log2(p);}}return H/b;}
 function randIC(W){const ic=new Uint8Array(W);for(let i=0;i<W;i++)ic[i]=srand()<.5?1:0;return ic;}
+function evolveRev(rule,W,T,x0,x1){const t=table(rule);let prev=Uint8Array.from(x0),cur=Uint8Array.from(x1);const rows=new Uint8Array(W*T);
+ for(let s=0;s<T;s++){rows.set(cur,s*W);const nr=new Uint8Array(W);
+  for(let i=0;i<W;i++){const l=cur[(i-1+W)%W],c=cur[i],r=cur[(i+1)%W];nr[i]=t[(l<<2)|(c<<1)|r]^prev[i];}prev=cur;cur=nr;}return rows;}
+function evolveRevBack(rule,W,T,x0,x1){const t=table(rule);let a=Uint8Array.from(x0),b=Uint8Array.from(x1);const rows=new Uint8Array(W*T);
+ for(let s=0;s<T;s++){rows.set(a,s*W);const p2=new Uint8Array(W);
+  for(let i=0;i<W;i++){const l=a[(i-1+W)%W],c=a[i],r=a[(i+1)%W];p2[i]=t[(l<<2)|(c<<1)|r]^b[i];}b=a;a=p2;}return rows;}
 
 function compute(rule){
  if(cache.has(rule))return cache.get(rule);
- _seed=(rule*2654435761+12345)>>>0;
- const sW=361,sS=180;const sic=new Uint8Array(sW);sic[sW>>1]=1;const seed=evolve(rule,sW,sS,sic);
- const W=241,S=5000;const hR=evolve(rule,W,S,randIC(W));
+ _seed=(rule*2654435761+6174)>>>0;
+ const W=401,S=5000;const hR=evolve(rule,W,S,randIC(W));
+ const sW=361,sS=180,sOff=(W-sW)>>1;const seed=new Uint8Array(sW*sS);
+ for(let s=0;s<sS;s++)for(let j=0;j<sW;j++)seed[s*sW+j]=hR[s*W+sOff+j];
  const seq=centerCol(hR,W,S);
  const bitsK=KS.map(k=>{const[ll,ac]=bitsForK(seq,k);return{k,bits:ll,acc:ac};});
  const obs2=obsSeries(hR,W,S);
  const oW=600,oS=360;const oic=new Uint8Array(oW);for(let i=(oW>>1)-15;i<(oW>>1)+15;i++)oic[i]=1;
  const hO=evolve(rule,oW,oS,oic);
  const ent={};BLOCKS.forEach(b=>{const arr=new Float64Array(oS);for(let s=0;s<oS;s++)arr[s]=blockEnt(hO,s*oW,oW,b);ent[b]=arr;});
- const obj={seed:{W:sW,S:sS,data:seed},bitsK,obs2,ent,oS};
+ const rW=241,rT=140,rb=4;const rblk=new Uint8Array(rW);for(let i=(rW>>1)-15;i<(rW>>1)+15;i++)rblk[i]=1;
+ const fF=evolveRev(rule,rW,rT,rblk,rblk),fB=evolveRevBack(rule,rW,rT,rblk,rblk);
+ const rxs=[],rys=[];for(let t=-(rT-1);t<=rT-1;t++){const d=t<0?-t:t;rxs.push(t);rys.push(blockEnt(t<0?fB:fF,d*rW,rW,rb));}
+ const rev={xs:rxs,ys:rys,T:rT-1,start:blockEnt(fF,0,rW,rb),end:blockEnt(fF,(rT-1)*rW,rW,rb)};
+ const obj={seed:{W:sW,S:sS,data:seed},bitsK,obs2,ent,oS,rev};
  cache.set(rule,obj);return obj;
 }
 
@@ -296,6 +318,10 @@ function render(){
  document.getElementById("bVal").textContent="b = "+state.b;
  document.getElementById("r3").innerHTML="Block size <b>"+state.b+"</b>: coarse entropy ends at <b>"+fin.toFixed(3)+"</b> bits/cell (started near 0).";
  document.querySelectorAll(".bbtn").forEach(btn=>btn.classList.toggle("active",+btn.dataset.b===state.b));
+ const rv=o.rev;
+ drawChart(document.getElementById("c4"),{xmin:-rv.T,xmax:rv.T,ymin:0,ymax:0.9,xticks:[-rv.T,0,rv.T],yticks:[0,0.3,0.6,0.9],
+   series:[{xs:rv.xs,ys:rv.ys,color:SEL,width:2}],marker:0,xlabel:"time step  (← backward · ordered · forward →)",ylabel:"coarse entropy (bits/cell)"});
+ document.getElementById("r4").innerHTML="Coarse entropy is lowest at the ordered center (<b>"+rv.start.toFixed(2)+"</b>) and climbs to <b>"+rv.end.toFixed(2)+"</b> bits/cell at both ends, identical forward and backward, so the observer cannot tell which way time runs.";
  document.querySelectorAll(".rb[data-rule]").forEach(btn=>btn.classList.toggle("active",+btn.dataset.rule===state.rule));
  document.getElementById("ruleNum").value=state.rule;
 }

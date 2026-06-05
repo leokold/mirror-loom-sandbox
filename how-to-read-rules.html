@@ -63,7 +63,7 @@
   </div>
 
   <h2>The four rules, first rows</h2>
-  <p>Same starting state for all four: a single black cell in the middle of a white row. Watch how differently they grow. The teal column is the one cell the sandbox observer actually watches, read straight down as a stream of 0s and 1s.</p>
+  <p>Same starting state for all four: a single black cell in the middle of a white row. Watch how differently they grow. The teal column is the cell the observer watches in the first experiment, read straight down as a stream of 0s and 1s.</p>
   <div class="rulegrid">
     <div class="rcard"><h3>Rule 250</h3><div class="tag">order &middot; left OR right</div>
       <canvas id="cv250" class="st"></canvas>
@@ -81,7 +81,7 @@
   <p style="font-size:14px;color:var(--muted);margin-top:8px;">From a single seed the action spreads out from the middle, so the edges stay white at first and some center columns are quiet. The sandbox runs each rule from a full random row instead, which fills the screen and makes the watched column busier.</p>
 
   <h2>What the observer reads</h2>
-  <p>The grid of cells, evolving by the rule, is the world. The observer in the sandbox is not one of those cells. It sits outside and reads only the teal center column, straight down, as a stream of 0s and 1s. All three experiments ask the same thing: how much of the world can that one narrow stream let it reconstruct.</p>
+  <p>The grid of cells, evolving by the rule, is the world. The observer in the sandbox is not one of those cells. It sits outside and reads only a thin slice: in the first experiment the teal center column, top to bottom, as a stream of 0s and 1s; the later experiments change what it looks at, the two neighboring cells, or a coarse, blocky view. All four experiments ask the same thing: how much of the world can that limited view reconstruct.</p>
   <a class="back" href="index.html">&larr; Back to the sandbox</a>
 
   <footer>Elementary cellular automata, numbered 0 to 255 after Stephen Wolfram. Companion to the bounded-observer sandbox.</footer>
