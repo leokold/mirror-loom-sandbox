@@ -99,7 +99,7 @@
   <div class="card">
     <div class="why">The real curve, computed over the sandbox run (one cell, 5000 steps). Error in bits per symbol versus memory <code>k</code>.</div>
     <canvas id="ch1" class="chart"></canvas>
-    <p class="note">Order (Rule 250) is gripped instantly at ~0 bits. Chaos (Rule 30) sits at the 1-bit wall for every <code>k</code>, drifting just above 1 at high memory as the estimator overfits noise it cannot generalize: no amount of memory helps, because the only way to know the next symbol is to run the whole world, which is computational irreducibility. The complex rule (110) starts at a coin flip (0.99 bits) and, once memory reaches about five symbols, falls to a floor near <b>0.13 bits</b> (about 96% accuracy) by <code>k</code> = 10. The shape, a drop to a floor well below the chaos wall, is the durable result.</p>
+    <p class="note">Order (Rule 250) is gripped instantly at ~0 bits. Chaos (Rule 30) sits at the 1-bit wall for every <code>k</code>, drifting just above 1 at high memory as the estimator overfits noise it cannot generalize: more memory does not help here, because there is no known shortcut faster than running the whole world, which is computational irreducibility. The complex rule (110) starts at a coin flip (0.99 bits) and, once memory reaches about five symbols, falls to a floor near <b>0.13 bits</b> (about 96% accuracy) by <code>k</code> = 10. The shape, a drop to a floor well below the chaos wall, is the durable result.</p>
   </div>
 
   <h2>Chart 2: swap the observer</h2>
