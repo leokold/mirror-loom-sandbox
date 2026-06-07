@@ -120,7 +120,7 @@
   </div>
 
   <h2>Experiment 3: watch time appear</h2>
-  <p>Start the world ordered, a small solid block, and let the observer see only a coarse, blocky version: lump the row into blocks of <code>b</code> cells and look at each block's pattern. Measure how scrambled that blurry view looks, step by step, with entropy again, computed as <code>H = -(1/b) * sum over patterns v of f(v) * log2 f(v)</code> in bits per cell. From the ordered start the blur's entropy climbs, fastest for chaos and barely at all for order. The punchline: the rule is completely deterministic, nothing random is added. The growing disorder is not in the world's steps, it is in the observer's blurry view failing to keep up. The arrow of time, order giving way to disorder, is something a coarse-graining observer manufactures. This is the second law of thermodynamics retold as a fact about observers, which is Wolfram's argument for why we feel time the way we do.</p>
+  <p>Start the world ordered, a small solid block, and let the observer see only a coarse, blocky version: lump the row into blocks of <code>b</code> cells and look at each block's pattern. Measure how scrambled that blurry view looks, step by step, with entropy again, computed as <code>H = -(1/b) * sum over patterns v of f(v) * log2 f(v)</code> in bits per cell. From the ordered start the blur's entropy climbs, fastest for chaos and moderately for the complex rule. Order is the exception: Rule 250 floods to a single uniform row, so its blur rises only briefly while the spreading front mixes the view, then falls back to zero as the row fills, a system relaxing into certainty rather than building a lasting arrow. The punchline: the rule is completely deterministic, nothing random is added. The growing disorder is not in the world's steps, it is in the observer's blurry view failing to keep up. The arrow of time, order giving way to disorder, is something a coarse-graining observer manufactures from a low-entropy past: start from a random row instead and the blur begins already scrambled, with no arrow to climb. This is the second law read as a fact about observers, an old idea (Boltzmann, Gibbs, and especially Jaynes). Wolfram's distinct claim is sharper, that what forces the rise is computational irreducibility meeting a bounded observer. This toy shows only the coarse-graining half, not that bridge, since even the reducible rules here grow the same arrow.</p>
 
   <div class="card">
     <h3>3. Watch time appear</h3>
@@ -129,7 +129,6 @@
       <span id="bSeg" style="display:flex;gap:6px;flex:1">
         <button class="rb bbtn" data-b="2">2</button>
         <button class="rb bbtn" data-b="4">4</button>
-        <button class="rb bbtn" data-b="8">8</button>
       </span>
       <span class="val" id="bVal"></span></div>
     <canvas id="c3" class="chart"></canvas>
@@ -149,7 +148,7 @@
   </div>
 
   <h2>What it adds up to</h2>
-  <p>One bounded observer, three faces of a single limit. Prediction runs into an irreducible floor, so some of the world cannot be compressed. Where that floor sits depends on the observer's grain, so what is knowable lives in the fit between world and observer, not in either alone. And running the observer forward, the arrow of time falls out of its coarse-graining, so completely that even a reversible world with no arrow of its own grows one for the observer. The bridge to cognitive science is direct: perception and thought are compression, the brain is a bounded observer making useful, lossy models of a world it can never fully hold, and what you can know, even your felt sense of time passing, is shaped by your limits as much as by what is out there.</p>
+  <p>One bounded observer, several faces of a single condition: being too small to hold the world whole. They are not one mechanism, though, and it is worth keeping them apart. Prediction runs into an irreducible floor (computational irreducibility), so some of the world cannot be compressed. Where that floor sits depends on the observer's grain and instrument, so what is knowable lives in the fit between world and observer, not in either alone. And running the observer forward from a low-entropy start, the arrow of time falls out of its coarse-graining, so completely that even a reversible world with no arrow of its own grows one for the observer. Whether these are ultimately the same limit, whether irreducibility is what underwrites the arrow, is the thesis of Wolfram's Observer Theory; this sandbox lays the pieces side by side rather than proving them one. The bridge to cognitive science is direct: perception and thought are compression, the brain is a bounded observer making useful, lossy models of a world it can never fully hold, and what you can know, even your felt sense of time passing, is shaped by your limits as much as by what is out there.</p>
 
   <h2>Is any of this new math?</h2>
   <p>No, and that matters for trusting it. The tools are standard: Shannon's information theory (1948), simple memory-<code>k</code> prediction (n-gram models), Laplace smoothing, and block entropy. The deeper quantities the curves approach, the entropy rate and the predictable information, are studied formally in a field called computational mechanics. The only original move here is the framing, treating these three textbook measurements as one story about an observer. To go further you would reconstruct the system's smallest predictive model, an epsilon-machine, and use bias-corrected entropy estimates, which would sharpen the numbers without changing the shapes.</p>
@@ -181,7 +180,7 @@ const TEAL="#2a9d8f",GOLD="#cf9a1e",BROWN="#9c5b34",SEL="#16130f",ACC="#9c5b34";
 const OBSA="#4a4640",OBSB="#2a9d8f",OBSC="#cf9a1e";
 const KS=Array.from({length:15},(_,i)=>i);
 const K2MAX=6;
-const BLOCKS=[2,4,8];
+const BLOCKS=[2,4];
 const REFS=[250,110,30], REFCOL={250:TEAL,110:GOLD,30:BROWN};
 const RLABEL={250:"250 order",90:"90 fractal",110:"110 complex",30:"30 chaos"};
 let _seed=12345;
